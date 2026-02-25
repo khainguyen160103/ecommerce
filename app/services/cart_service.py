@@ -4,21 +4,23 @@ User: CRUD giỏ hàng cá nhân
 Admin: Xem tất cả giỏ hàng
 """
 from app.models.cart_model import Cart, CartOut
-from app.models.cart_item_model import CartItem, CartItemIn, CartItemOut
-from app.models.product_model import Product
+from app.models.cart_item_model import CartItem, CartItemOut
 from app.models.user_model import User
-from fastapi import HTTPException, status
-from sqlmodel import Session, select
+from app.repositories.cart_repository import CartRepository
+from fastapi import HTTPException, status, Depends
+from sqlmodel import Session
 from uuid import UUID
-from typing import List, Dict, Any
-from datetime import datetime
+from typing import Dict, Any, Annotated, Optional
 
 
 class CartService:
     """Service quản lý giỏ hàng"""
-    
+
+    def __init__(self, repository: Annotated[CartRepository, Depends()]):
+        self.repository = repository
+
     # ==================== USER FUNCTIONS ====================
-    
+
     def get_my_cart(self, current_user: User, session: Session) -> Dict[str, Any]:
         """
         [USER] Lấy giỏ hàng của user hiện tại
@@ -29,34 +31,29 @@ class CartService:
             Dict chứa cart và cart items
         """
         # Tìm hoặc tạo cart cho user
-        cart = session.exec(
-            select(Cart).where(Cart.user_id == current_user.id)
-        ).first()
-        
+        cart = self.repository.get_cart_by_user_id(current_user.id, session)
+
         if not cart:
             # Tạo cart mới nếu chưa có
             cart = Cart(user_id=current_user.id, total=0)
-            session.add(cart)
-            session.commit()
-            session.refresh(cart)
-        
+            cart = self.repository.create_cart(cart, session)
+
         # Lấy cart items
-        cart_items = session.exec(
-            select(CartItem).where(CartItem.cart_id == cart.id)
-        ).all()
-        
+        cart_items = self.repository.get_cart_items(cart.id, session)
+
         return {
             "cart": CartOut.model_validate(cart),
             "items": [CartItemOut.model_validate(item) for item in cart_items],
-            "total_items": len(cart_items)
+            "total_items": len(cart_items),
         }
-    
+
     def add_to_cart(
-        self, 
-        current_user: User, 
-        product_id: UUID, 
-        quantity: int, 
-        session: Session
+        self,
+        current_user: User,
+        product_id: UUID,
+        detail_id: UUID,
+        quantity: int,
+        session: Session = None,
     ) -> Dict[str, Any]:
         """
         [USER] Thêm sản phẩm vào giỏ hàng
@@ -69,69 +66,48 @@ class CartService:
             Dict chứa message và cart item
         """
         # Kiểm tra sản phẩm tồn tại
-        product = session.exec(
-            select(Product).where(Product.id == product_id)
-        ).first()
-        
+        product = self.repository.get_product_by_id(product_id, session)
+
         if not product:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Sản phẩm không tồn tại"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Sản phẩm không tồn tại"
             )
-        
+
         # Tìm hoặc tạo cart
-        cart = session.exec(
-            select(Cart).where(Cart.user_id == current_user.id)
-        ).first()
-        
-        if not cart:
-            cart = Cart(user_id=current_user.id, total=0)
-            session.add(cart)
-            session.commit()
-            session.refresh(cart)
-        
+        cart = self.repository.get_cart_by_user_id(current_user.id, session)
+
+        # if not cart:
+        #     cart = Cart(user_id=current_user.id, total=0)
+        #     cart = self.repository.create_cart(cart, session)
+
         # Kiểm tra sản phẩm đã có trong cart chưa
-        existing_item = session.exec(
-            select(CartItem).where(
-                (CartItem.cart_id == cart.id) & 
-                (CartItem.product_id == product_id)
-            )
-        ).first()
-        
+        existing_item = self.repository.get_cart_item_by_detail(
+            cart.id, detail_id, session
+        )
+        print("exist cart: ", existing_item)
         if existing_item:
             # Cập nhật số lượng
             existing_item.quantity += quantity
-            existing_item.update_at = datetime.now()
-            session.add(existing_item)
-            cart_item = existing_item
+            cart_item = self.repository.update_cart_item(existing_item, session)
             message = "Cập nhật số lượng sản phẩm trong giỏ hàng"
         else:
             # Thêm mới
             cart_item = CartItem(
                 cart_id=cart.id,
                 product_id=product_id,
-                quantity=quantity
+                quantity=quantity,
+                detail_id=detail_id,
             )
-            session.add(cart_item)
+            cart_item = self.repository.create_cart_item(cart_item, session)
             message = "Thêm sản phẩm vào giỏ hàng thành công"
-        
+
         # Cập nhật tổng số lượng trong cart
         self._update_cart_total(cart=cart, session=session)
-        
-        session.commit()
-        session.refresh(cart_item)
-        
-        return {
-            "message": message,
-            "cart_item": CartItemOut.model_validate(cart_item)
-        }
-    
+
+        return {"message": message, "cart_item": CartItemOut.model_validate(cart_item)}
+
     def update_cart_item(
-        self, 
-        current_user: User, 
-        cart_item_id: UUID, 
-        quantity: int, 
-        session: Session
+        self, current_user: User, cart_item_id: UUID, quantity: int, session: Session
     ) -> Dict[str, Any]:
         """
         [USER] Cập nhật số lượng sản phẩm trong giỏ
@@ -145,42 +121,29 @@ class CartService:
         """
         # Kiểm tra cart item thuộc về user
         cart_item = self._get_user_cart_item(
-            current_user=current_user, 
-            cart_item_id=cart_item_id, 
-            session=session
+            current_user=current_user, cart_item_id=cart_item_id, session=session
         )
-        
+
         if quantity <= 0:
             # Xóa nếu số lượng <= 0
             return self.remove_from_cart(
-                current_user=current_user,
-                cart_item_id=cart_item_id,
-                session=session
+                current_user=current_user, cart_item_id=cart_item_id, session=session
             )
-        
+
         cart_item.quantity = quantity
-        cart_item.update_at = datetime.now()
-        session.add(cart_item)
-        
+        cart_item = self.repository.update_cart_item(cart_item, session)
+
         # Cập nhật tổng cart
-        cart = session.exec(
-            select(Cart).where(Cart.id == cart_item.cart_id)
-        ).first()
+        cart = self.repository.get_cart_by_id(cart_item.cart_id, session)
         self._update_cart_total(cart=cart, session=session)
-        
-        session.commit()
-        session.refresh(cart_item)
-        
+
         return {
             "message": "Cập nhật số lượng thành công",
-            "cart_item": CartItemOut.model_validate(cart_item)
+            "cart_item": CartItemOut.model_validate(cart_item),
         }
-    
+
     def remove_from_cart(
-        self, 
-        current_user: User, 
-        cart_item_id: UUID, 
-        session: Session
+        self, current_user: User, cart_item_id: UUID, session: Session
     ) -> Dict[str, str]:
         """
         [USER] Xóa sản phẩm khỏi giỏ hàng
@@ -192,22 +155,16 @@ class CartService:
             Dict chứa message
         """
         cart_item = self._get_user_cart_item(
-            current_user=current_user, 
-            cart_item_id=cart_item_id, 
-            session=session
+            current_user=current_user, cart_item_id=cart_item_id, session=session
         )
-        
-        cart = session.exec(
-            select(Cart).where(Cart.id == cart_item.cart_id)
-        ).first()
-        
-        session.delete(cart_item)
-        
+
+        cart = self.repository.get_cart_by_id(cart_item.cart_id, session)
+
+        self.repository.delete_cart_item(cart_item, session)
+
         # Cập nhật tổng cart
         self._update_cart_total(cart=cart, session=session)
-        
-        session.commit()
-        
+
         return {"message": "Xóa sản phẩm khỏi giỏ hàng thành công"}
     
     def clear_cart(self, current_user: User, session: Session) -> Dict[str, str]:
@@ -219,9 +176,7 @@ class CartService:
         Returns:
             Dict chứa message
         """
-        cart = session.exec(
-            select(Cart).where(Cart.user_id == current_user.id)
-        ).first()
+        cart = self.repository.get_cart_by_user_id(current_user.id, session)
         
         if not cart:
             raise HTTPException(
@@ -230,16 +185,10 @@ class CartService:
             )
         
         # Xóa tất cả cart items
-        cart_items = session.exec(
-            select(CartItem).where(CartItem.cart_id == cart.id)
-        ).all()
-        
-        for item in cart_items:
-            session.delete(item)
-        
-        cart.total = 0
-        session.add(cart)
-        session.commit()
+        self.repository.delete_all_cart_items(cart.id, session)
+
+        # Cập nhật cart total
+        self.repository.update_cart_total(cart, 0, session)
         
         return {"message": "Đã xóa toàn bộ giỏ hàng"}
     
@@ -254,9 +203,7 @@ class CartService:
         """
         Helper: Lấy cart item và kiểm tra quyền sở hữu
         """
-        cart_item = session.exec(
-            select(CartItem).where(CartItem.id == cart_item_id)
-        ).first()
+        cart_item = self.repository.get_cart_item_by_id(cart_item_id, session)
         
         if not cart_item:
             raise HTTPException(
@@ -265,9 +212,7 @@ class CartService:
             )
         
         # Kiểm tra cart thuộc về user
-        cart = session.exec(
-            select(Cart).where(Cart.id == cart_item.cart_id)
-        ).first()
+        cart = self.repository.get_cart_by_id(cart_item.cart_id, session)
         
         if cart.user_id != current_user.id:
             raise HTTPException(
@@ -281,10 +226,6 @@ class CartService:
         """
         Helper: Cập nhật tổng số lượng trong cart
         """
-        cart_items = session.exec(
-            select(CartItem).where(CartItem.cart_id == cart.id)
-        ).all()
-        
-        cart.total = sum(item.quantity for item in cart_items)
-        cart.update_at = datetime.now()
-        session.add(cart)
+        cart_items = self.repository.get_cart_items(cart.id, session)
+        total = sum(item.quantity for item in cart_items)
+        self.repository.update_cart_total(cart, total, session)

@@ -1,5 +1,8 @@
 from sqlmodel import SQLModel, Field, Relationship
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from .user_model import User
 class Role(SQLModel, table=True): 
     '''
     role id = 1 (user), id = 0 admin

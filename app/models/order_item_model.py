@@ -1,7 +1,11 @@
 from sqlmodel import Field, SQLModel, Relationship
 from uuid import UUID, uuid4
 from datetime import datetime
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from .order_model import Order
+    from .product_model import Product
 class OrderItemBase(SQLModel):
     order_id: UUID = Field(foreign_key="order.id")
     product_id: UUID = Field(foreign_key="product.id")

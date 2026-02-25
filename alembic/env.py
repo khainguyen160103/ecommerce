@@ -3,9 +3,18 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from sqlmodel import SQLModel
+from app.models.adress_model import Address
+from app.models.payment_detail_model import PaymentDetail
+from app.models.cart_model import Cart
+from app.models.cart_item_model import CartItem
+from app.models.category_model import Category
+from app.models.order_item_model import OrderItem
+from app.models.order_model import Order
+from app.models.product_detail_model import ProductDetail
+from app.models.product_model import Product
 from app.models.role_model import Role
 from app.models.user_model import User 
-
+from app.models.product_image_model import ProductImage
 from alembic import context
 
 # this is the Alembic Config object, which provides

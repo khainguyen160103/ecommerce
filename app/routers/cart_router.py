@@ -7,20 +7,22 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from uuid import UUID
 from pydantic import BaseModel
-from app.config.database import get_session
+from app.core.database import get_session
 from app.models.user_model import User
 from app.services.cart_service import CartService
-from app.dependencies.auth_dependency import get_current_user
-from typing import Dict, Any
+from app.deps.auth_dependency import get_current_user
+from typing import Dict, Any, Optional
 
 cartRouter = APIRouter(prefix="/cart", tags=["Cart"])
 
 
 class AddToCartRequest(BaseModel):
     """Schema thêm sản phẩm vào giỏ"""
-    product_id: UUID
-    quantity: int = 1
 
+    cart_id: UUID
+    product_id: UUID
+    detail_id: UUID
+    quantity: int = 1
 
 class UpdateCartItemRequest(BaseModel):
     """Schema cập nhật số lượng"""
@@ -42,6 +44,10 @@ def get_my_cart(
     """
     return service.get_my_cart(current_user=current_user, session=session)
 
+# request
+# user id
+# product id
+# detail
 
 @cartRouter.post("/items", summary="[USER] Thêm sản phẩm vào giỏ")
 def add_to_cart(
@@ -55,11 +61,13 @@ def add_to_cart(
     - Yêu cầu đăng nhập
     - Nếu sản phẩm đã có trong giỏ, cộng thêm số lượng
     """
+    print("data cart: ", data)
     return service.add_to_cart(
         current_user=current_user,
         product_id=data.product_id,
         quantity=data.quantity,
-        session=session
+        detail_id=data.detail_id,
+        session=session,
     )
 
 

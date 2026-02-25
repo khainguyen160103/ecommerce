@@ -6,11 +6,11 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from uuid import UUID
 from pydantic import BaseModel
-from app.config.database import get_session
+from app.core.database import get_session
 from app.models.adress_model import AddressIn, AddressOut
 from app.models.user_model import User
 from app.services.address_service import AddressService
-from app.dependencies.auth_dependency import get_current_user
+from app.deps.auth_dependency import get_current_user
 from typing import Dict, Any, List
 
 addressRouter = APIRouter(prefix="/addresses", tags=["Addresses"])

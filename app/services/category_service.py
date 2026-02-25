@@ -4,82 +4,45 @@ Admin: CRUD danh mục
 User/Guest: Xem danh mục
 """
 from app.models.category_model import Category, CategoryIn, CategoryOut
-from fastapi import HTTPException, status
+from app.repositories.category_repository import CategoryRepository
+from fastapi import HTTPException, status, Depends
 from sqlmodel import Session, select
 from uuid import UUID
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Annotated
 
 
 class CategoryService:
     """Service quản lý danh mục sản phẩm"""
-    
+    def __init__(self, repository : Annotated[CategoryRepository, Depends()]):
+        self.repository = repository
     # ==================== GUEST/USER FUNCTIONS ====================
     
     def get_all_categories(self, session: Session) -> List[CategoryOut]:
-        """
-        [GUEST] Lấy tất cả danh mục
-        Args:
-            session: Database session
-        Returns:
-            List các CategoryOut
-        """
-        categories = session.exec(select(Category)).all()
-        return [CategoryOut.model_validate(cat) for cat in categories]
+        return self.repository.get_all(session=session)
+    
     
     def get_category_by_id(self, category_id: UUID, session: Session) -> CategoryOut:
-        """
-        [GUEST] Lấy danh mục theo ID
-        Args:
-            category_id: UUID của danh mục
-            session: Database session
-        Returns:
-            CategoryOut object
-        Raises:
-            HTTPException 404: Danh mục không tồn tại
-        """
-        category = session.exec(
-            select(Category).where(Category.id == category_id)
-        ).first()
-        
-        if not category:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Danh mục không tồn tại"
-            )
-        return CategoryOut.model_validate(category)
+         return self.repository.get_by_id(category_id, session=session)
     
     # ==================== ADMIN FUNCTIONS ====================
     
     def create_category(self, data: CategoryIn, session: Session) -> Dict[str, Any]:
-        """
-        [ADMIN] Tạo danh mục mới
-        Args:
-            data: Thông tin danh mục (name, description)
-            session: Database session
-        Returns:
-            Dict chứa message và category info
-        Raises:
-            HTTPException 400: Tên danh mục đã tồn tại
-        """
-        # Kiểm tra tên đã tồn tại
-        existing = session.exec(
-            select(Category).where(Category.name == data.name)
-        ).first()
+        existing = self.repository.get_by_name(data.name, session=session)
         
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Tên danh mục đã tồn tại"
             )
-        
-        category = Category(**data.model_dump())
-        session.add(category)
-        session.commit()
-        session.refresh(category)
+        category = Category(
+            name=data.name, 
+            description=data.description
+        )
+        result = self.repository.create(category=category, session=session)
         
         return {
             "message": "Tạo danh mục thành công",
-            "category": CategoryOut.model_validate(category)
+            "category": CategoryOut.model_validate(result)
         }
     
     def update_category(

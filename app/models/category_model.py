@@ -1,7 +1,10 @@
 from sqlmodel import Field, SQLModel, Relationship
 from uuid import UUID, uuid4
 from datetime import datetime
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from .product_model import Product
 class CategoryBase(SQLModel):
     name: str = Field(nullable=False, unique=True)
     description: str | None = None

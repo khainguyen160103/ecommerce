@@ -3,14 +3,19 @@ Product Router - API endpoints quản lý sản phẩm
 Admin: CRUD products
 User/Guest: Xem sản phẩm
 """
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Form, File, UploadFile
 from sqlmodel import Session
 from uuid import UUID
-from app.config.database import get_session
-from app.models.product_model import ProductIn, ProductOut
+from typing import Annotated
+
+from app.core.database import get_session
+from app.deps.auth_dependency import admin_required
+from app.models.product_model import ProductIn, ProductOut, ProductDetailOut, Product
 from app.models.user_model import User
 from app.services.product_service import ProductService
-from app.dependencies.auth_dependency import admin_required
+from app.models.product_detail_model import ProductDetailIn, ProductDetailOut
+from sqlmodel import select
+from app.models.product_detail_model import ProductDetail
 from typing import Dict, Any, List
 
 productRouter = APIRouter(prefix="/products", tags=["Products"])
@@ -18,26 +23,18 @@ productRouter = APIRouter(prefix="/products", tags=["Products"])
 
 # ==================== PUBLIC ENDPOINTS (Guest có thể xem) ====================
 
-@productRouter.get("/", summary="[PUBLIC] Lấy danh sách sản phẩm")
+@productRouter.get("", summary="[PUBLIC] Lấy danh sách sản phẩm")
 def get_all_products(
-    skip: int = 0,
-    limit: int = 100,
+    session: Annotated[Session, Depends(get_session)],
+    service: Annotated[ProductService, Depends()],
     category_id: UUID | None = None,
-    session: Session = Depends(get_session),
-    service: ProductService = Depends()
-) -> List[ProductOut]:
-    """
-    [PUBLIC] Lấy danh sách sản phẩm
-    - Không cần đăng nhập
-    - **skip**: Số record bỏ qua
-    - **limit**: Số record tối đa trả về
-    - **category_id**: Lọc theo danh mục (optional)
-    """
+    page: int = 0,
+    limit: int = 20,
+) -> Dict[str, Any]:
+    # off set = (page -1 ) * pageSize(limit)
+    # limit = pageSize
     return service.get_all_products(
-        session=session, 
-        skip=skip, 
-        limit=limit, 
-        category_id=category_id
+        session=session, category_id=category_id, page=page, limit=limit
     )
 
 
@@ -64,9 +61,9 @@ def search_products(
 @productRouter.get("/{product_id}", summary="[PUBLIC] Lấy chi tiết sản phẩm")
 def get_product_by_id(
     product_id: UUID,
-    session: Session = Depends(get_session),
-    service: ProductService = Depends()
-) -> ProductOut:
+    session: Annotated[Session, Depends(get_session)],
+    service: Annotated[ProductService, Depends()],
+) -> Dict[str, Any]:
     """
     [PUBLIC] Lấy thông tin chi tiết sản phẩm
     - Không cần đăng nhập
@@ -76,18 +73,24 @@ def get_product_by_id(
 
 # ==================== ADMIN ENDPOINTS ====================
 
-@productRouter.post("/", summary="[ADMIN] Tạo sản phẩm mới")
+@productRouter.post("", dependencies=[Depends(admin_required)])
 def create_product(
-    data: ProductIn,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(admin_required),
-    service: ProductService = Depends()
+    session: Annotated[Session, Depends(get_session)],
+    service: Annotated[ProductService, Depends()],
+    name: Annotated[str, Form()],
+    description: Annotated[str, Form()],
+    price: Annotated[str, Form()],
+    category_id: Annotated[UUID, Form()],
+    files: Annotated[List[UploadFile], File()],
 ) -> Dict[str, Any]:
-    """
-    [ADMIN] Tạo sản phẩm mới
-    - Yêu cầu quyền Admin
-    """
-    return service.create_product(data=data, session=session)
+    return service.create_product(
+        name=name,
+        description=description,
+        price=price,
+        category_id=category_id,
+        files=files,
+        session=session,
+    )
 
 
 @productRouter.put("/{product_id}", summary="[ADMIN] Cập nhật sản phẩm")
@@ -95,8 +98,8 @@ def update_product(
     product_id: UUID,
     data: ProductIn,
     session: Session = Depends(get_session),
-    current_user: User = Depends(admin_required),
-    service: ProductService = Depends()
+    current_user: User = Depends(),
+    service: ProductService = Depends(),
 ) -> Dict[str, Any]:
     """
     [ADMIN] Cập nhật thông tin sản phẩm
@@ -109,15 +112,84 @@ def update_product(
     )
 
 
-@productRouter.delete("/{product_id}", summary="[ADMIN] Xóa sản phẩm")
+@productRouter.delete("/{product_id}", dependencies=[Depends(admin_required)])
 def delete_product(
     product_id: UUID,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(admin_required),
-    service: ProductService = Depends()
+    session: Annotated[Session, Depends(get_session)],
+    service: Annotated[ProductService, Depends()],
 ) -> Dict[str, str]:
+    return service.delete_product(product_id=product_id, session=session)
+
+
+@productRouter.post(
+    "/{product_id}/details",
+    summary="[ADMIN] Thêm chi tiết sản phẩm",
+    dependencies=[Depends(admin_required)],
+)
+def add_product_detail(
+    product_id: UUID,
+    data: ProductDetailIn,
+    session: Annotated[Session, Depends(get_session)],
+    service: Annotated[ProductService, Depends()],
+) -> Dict[str, Any]:
     """
-    [ADMIN] Xóa sản phẩm
+    [ADMIN] Thêm variant/chi tiết cho sản phẩm
     - Yêu cầu quyền Admin
     """
-    return service.delete_product(product_id=product_id, session=session)
+    return service.add_product_detail(product_id=product_id, data=data, session=session)
+
+
+@productRouter.get(
+    "/{product_id}/details", summary="[PUBLIC] Lấy danh sách chi tiết sản phẩm"
+)
+def get_product_details(
+    product_id: UUID,
+    session: Annotated[Session, Depends(get_session)],
+    service: Annotated[ProductService, Depends()],
+) -> Dict[str, Any]:
+    """
+    [PUBLIC] Lấy danh sách các variant/chi tiết của sản phẩm
+    """
+
+    return service.get_product_details(product_id=product_id, session=session)
+
+
+@productRouter.put(
+    "/{product_id}/details/{detail_id}",
+    summary="[ADMIN] Cập nhật chi tiết sản phẩm",
+    dependencies=[Depends(admin_required)],
+)
+def update_product_detail(
+    product_id: UUID,
+    detail_id: UUID,
+    data: ProductDetailIn,
+    session: Annotated[Session, Depends(get_session)],
+    service: Annotated[ProductService, Depends()],
+) -> Dict[str, Any]:
+    """
+    [ADMIN] Cập nhật một variant/chi tiết của sản phẩm
+    - Yêu cầu quyền Admin
+    """
+    return service.update_product_detail(
+        product_id=product_id, detail_id=detail_id, data=data, session=session
+    )
+
+
+@productRouter.delete(
+    "/{product_id}/details/{detail_id}",
+    summary="[ADMIN] Xóa chi tiết sản phẩm",
+    dependencies=[Depends(admin_required)],
+)
+def delete_product_detail(
+    product_id: UUID,
+    detail_id: UUID,
+    session: Annotated[Session, Depends(get_session)],
+    service: Annotated[ProductService, Depends()],
+) -> Dict[str, str]:
+    """
+    [ADMIN] Xóa một variant/chi tiết của sản phẩm
+    - Yêu cầu quyền Admin
+    """
+    return service.delete_product_detail(
+        product_id=product_id, detail_id=detail_id, session=session
+    )

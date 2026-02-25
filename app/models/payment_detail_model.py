@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 from datetime import datetime
 
 class PaymentDetailBase(SQLModel):
-    order_id: UUID = Field(foreign_key="order.id")
+    # order_id: UUID = Field(foreign_key="order.id")
     amount: int
     provider: str
     status: str = "pending"

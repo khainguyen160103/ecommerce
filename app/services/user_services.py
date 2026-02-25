@@ -5,47 +5,29 @@ User: Xem và cập nhật thông tin cá nhân
 """
 from app.models.user_model import User, UserOut
 from app.utils.auth_helper import hash_password
-from fastapi import HTTPException, status
+from app.repositories.user_repository import UserRepository
+from fastapi import HTTPException, status, Depends
 from sqlmodel import Session, select
 from uuid import UUID
-from typing import List, Dict, Any
-
+from typing import List, Dict, Any, Annotated
+from app.utils.response_helper import ResponseHandler
 
 class UserService:
-    """Service quản lý user"""
-    
-    # ==================== ADMIN FUNCTIONS ====================
-    
-    def get_all_users(self, session: Session, skip: int = 0, limit: int = 100) -> List[UserOut]:
-        """
-        [ADMIN] Lấy danh sách tất cả users
-        Args:
-            session: Database session
-            skip: Số record bỏ qua (pagination)
-            limit: Số record tối đa trả về
-        Returns:
-            List các UserOut
-        """
-        users = session.exec(select(User).offset(skip).limit(limit)).all()
+    def __init__(self, repository: Annotated[UserRepository, Depends()]) -> None:
+        self.repository = repository
+    def get_user_by_email(self,session: Session, user_email:str) -> UserOut:
+            user = self.repository.get_by_email(user_email,session)
+            return user
+    def get_all_users(self, session: Session, limit: int = 100, skip: int = 0,
+         ) -> List[UserOut]:
+        # công thức phân trang Offset = (page -1) * page size(LIMIT) 
+        users = self.repository.get_all(session=session, skip=skip, limit=limit)
         return [UserOut.model_validate(user) for user in users]
     
     def get_user_by_id(self, user_id: UUID, session: Session) -> UserOut:
-        """
-        [ADMIN] Lấy thông tin user theo ID
-        Args:
-            user_id: UUID của user
-            session: Database session
-        Returns:
-            UserOut object
-        Raises:
-            HTTPException 404: User không tồn tại
-        """
-        user = session.exec(select(User).where(User.id == user_id)).first()
+        user = self.repository.get_by_id(user_id, session=session)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User không tồn tại"
-            )
+            return ResponseHandler.error("Không tìm thấy người dùng", 404)
         return UserOut.model_validate(user)
     
     def update_user_role(
@@ -54,15 +36,6 @@ class UserService:
         role_id: int, 
         session: Session
     ) -> Dict[str, Any]:
-        """
-        [ADMIN] Cập nhật role của user
-        Args:
-            user_id: UUID của user
-            role_id: Role mới (0=Admin, 1=User)
-            session: Database session
-        Returns:
-            Dict chứa message và user info
-        """
         user = session.exec(select(User).where(User.id == user_id)).first()
         if not user:
             raise HTTPException(
@@ -115,28 +88,21 @@ class UserService:
         Returns:
             Dict chứa message
         """
-        user = session.exec(select(User).where(User.id == user_id)).first()
+        # user = session.exec(select(User).where(User.id == user_id)).first()
+        user = self.repository.get_by_id(id=user_id, session=session)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User không tồn tại"
             )
         
-        session.delete(user)
-        session.commit()
+        
         
         return {"message": "Xóa user thành công"}
     
     # ==================== USER FUNCTIONS ====================
     
     def get_my_profile(self, current_user: User) -> UserOut:
-        """
-        [USER] Lấy thông tin cá nhân
-        Args:
-            current_user: User hiện tại
-        Returns:
-            UserOut object
-        """
         return UserOut.model_validate(current_user)
     
     def update_my_profile(

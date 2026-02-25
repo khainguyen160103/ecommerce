@@ -6,12 +6,14 @@ User/Guest: Xem danh mục
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from uuid import UUID
-from app.config.database import get_session
+from app.core.database import get_session
 from app.models.category_model import CategoryIn, CategoryOut
 from app.models.user_model import User
 from app.services.category_service import CategoryService
-from app.dependencies.auth_dependency import admin_required
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Annotated
+
+
+from app.deps.auth_dependency import admin_required
 
 categoryRouter = APIRouter(prefix="/categories", tags=["Categories"])
 
@@ -31,7 +33,7 @@ def get_all_categories(
     - **skip**: Số record bỏ qua
     - **limit**: Số record tối đa trả về
     """
-    return service.get_all_categories(session=session, skip=skip, limit=limit)
+    return service.get_all_categories(session=session)
 
 
 @categoryRouter.get("/{category_id}", summary="[PUBLIC] Lấy chi tiết danh mục")
@@ -49,17 +51,12 @@ def get_category_by_id(
 
 # ==================== ADMIN ENDPOINTS ====================
 
-@categoryRouter.post("/", summary="[ADMIN] Tạo danh mục mới")
+@categoryRouter.post("/", dependencies=[Depends(admin_required)])
 def create_category(
     data: CategoryIn,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(admin_required),
-    service: CategoryService = Depends()
+    session: Annotated[Session , Depends(get_session)],
+    service: Annotated[CategoryService , Depends()]
 ) -> Dict[str, Any]:
-    """
-    [ADMIN] Tạo danh mục sản phẩm mới
-    - Yêu cầu quyền Admin
-    """
     return service.create_category(data=data, session=session)
 
 
@@ -68,7 +65,6 @@ def update_category(
     category_id: UUID,
     data: CategoryIn,
     session: Session = Depends(get_session),
-    current_user: User = Depends(admin_required),
     service: CategoryService = Depends()
 ) -> Dict[str, Any]:
     """
@@ -86,7 +82,6 @@ def update_category(
 def delete_category(
     category_id: UUID,
     session: Session = Depends(get_session),
-    current_user: User = Depends(admin_required),
     service: CategoryService = Depends()
 ) -> Dict[str, str]:
     """

@@ -1,9 +1,13 @@
 from sqlmodel import Field, SQLModel, Relationship
 from uuid import UUID, uuid4
 from datetime import datetime
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from .user_model import User
+    from .cart_item_model import CartItem
 class CartBase(SQLModel):
-    user_id: UUID = Field(foreign_key="user.id")
+    user_id: UUID = Field(foreign_key="user.id", unique=True)
     total: int = 0
 
 class CartIn(CartBase):
@@ -22,3 +26,4 @@ class Cart(CartBase, table=True):
     
     # Relationship
     cart_items: list["CartItem"] = Relationship(back_populates="cart")
+    user: "User" = Relationship(back_populates="cart")
