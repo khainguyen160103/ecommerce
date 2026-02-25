@@ -18,6 +18,23 @@ from app.routers.checkout_router import checkoutRouter
 from app.routers.goship_router import goshipRouter
 from app.routers.chatbot_router import chatbotRouter
 from app.core.cloudinary import cloud_config
+from contextlib import asynccontextmanager
+from app.services.seed_admin import seed_admin, seed_roles
+from app.core.database import get_session
+
+
+def run_seeders():
+    with next(get_session()) as db:
+        seed_roles(db)
+        seed_admin(db)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    run_seeders()
+    yield
+
+
 app = FastAPI(
     title="E-Commerce API",
     description="""
@@ -28,7 +45,8 @@ app = FastAPI(
     - **User (role_id=1)**: Mua hàng, quản lý đơn hàng cá nhân
     - **Guest**: Xem sản phẩm, danh mục (không cần đăng nhập)
     """,
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 cloud_config()

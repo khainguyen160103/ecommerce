@@ -40,7 +40,9 @@ class Settings(BaseSettings):
 
     # Groq AI
     GROQ_API_KEY: str = ""
-
+    ADMIN_USERNAME: str = ""
+    ADMIN_PASSWORD: str = ""
+    ADMIN_EMAIL: str = ""
     class Config: 
         env_file = '.env'   
 
