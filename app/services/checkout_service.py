@@ -14,7 +14,7 @@ from app.core.settings import settings
 from fastapi import HTTPException, status, Depends
 from sqlmodel import Session
 from uuid import UUID
-from typing import Dict, Any, Annotated
+from typing import Dict, Any, Annotated, List, Optional
 
 
 class CheckoutService:
@@ -37,9 +37,12 @@ class CheckoutService:
             return_url=settings.VNPAY_RETURN_URL,
         )
 
-    def get_order_preview(self, user: User, session: Session) -> Dict[str, Any]:
+    def get_order_preview(
+        self, user: User, session: Session, item_ids: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """
         Xem trước đơn hàng từ giỏ hàng
+        item_ids: nếu có, chỉ lấy các cart items trong danh sách này
         """
         # Lấy giỏ hàng
         cart = self.order_repo.get_cart_by_user_id(user.id, session)
@@ -55,6 +58,15 @@ class CheckoutService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Giỏ hàng trống",
             )
+
+        # Lọc theo item_ids nếu có
+        if item_ids:
+            cart_items = [item for item in cart_items if str(item.id) in item_ids]
+            if not cart_items:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Không tìm thấy sản phẩm đã chọn trong giỏ hàng",
+                )
 
         # Lấy thông tin sản phẩm
         items = []
@@ -109,9 +121,11 @@ class CheckoutService:
         client_ip: str,
         rate_id: str | None = None,
         shipping_fee: int = 0,
+        item_ids: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Tạo đơn hàng và xử lý thanh toán
+        item_ids: nếu có, chỉ checkout các cart items trong danh sách này
         """
         if payment_method not in ("vnpay", "cod"):
             raise HTTPException(
@@ -133,6 +147,15 @@ class CheckoutService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Giỏ hàng trống",
             )
+
+        # Lọc theo item_ids nếu có
+        if item_ids:
+            cart_items = [item for item in cart_items if str(item.id) in item_ids]
+            if not cart_items:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Không tìm thấy sản phẩm đã chọn trong giỏ hàng",
+                )
 
         # Tính tổng tiền
         total = 0
@@ -213,10 +236,13 @@ class CheckoutService:
             }
 
     def _clear_cart(self, cart, cart_items, session: Session) -> None:
-        """Xóa toàn bộ items trong giỏ hàng"""
+        """Xóa các items đã checkout khỏi giỏ hàng"""
         for item in cart_items:
             self.order_repo.delete_cart_item(item, session)
-        cart.total = 0
+        # Lấy lại remaining items để cập nhật total
+        remaining = self.order_repo.get_cart_items(cart.id, session)
+        if not remaining:
+            cart.total = 0
         self.order_repo.update_cart_total(cart, session)
 
     def process_vnpay_return(

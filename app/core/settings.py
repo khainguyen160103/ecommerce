@@ -37,7 +37,10 @@ class Settings(BaseSettings):
     GOSHIP_FROM_WARD: int = 0
     GOSHIP_FROM_DISTRICT: int = 0
     GOSHIP_FROM_CITY: int = 0
-    
+
+    # Groq AI
+    GROQ_API_KEY: str = ""
+
     class Config: 
         env_file = '.env'   
 

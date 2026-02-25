@@ -84,6 +84,9 @@ class ProductService:
         res = {
             **product.model_dump(),
             "images": [img.model_dump() for img in product.images],
+            "product_details": [
+                detail.model_dump() for detail in product.product_details
+            ],
         }
         return JSONResponse(jsonable_encoder(res), 200)
 
@@ -96,6 +99,32 @@ class ProductService:
         )
 
         return [ProductOut.model_validate(p) for p in products]
+
+    def search_products(
+        self, keyword: str, session: Session, skip: int = 0, limit: int = 20
+    ) -> Dict[str, Any]:
+        """[PUBLIC] Tìm kiếm sản phẩm theo tên hoặc mô tả"""
+        products = self.repository.search(
+            keyword=keyword, session=session, skip=skip, limit=limit
+        )
+        response = {"data": []}
+        for product in products:
+            response["data"].append(
+                {
+                    **product.model_dump(),
+                    "images": [img.model_dump() for img in product.images],
+                }
+            )
+        response.update(
+            {
+                "pagination": {
+                    "skip": skip,
+                    "limit": limit,
+                    "total_item": len(response["data"]),
+                }
+            }
+        )
+        return JSONResponse(jsonable_encoder(response), 200)
 
     # ==================== ADMIN FUNCTIONS - PRODUCT ====================
 

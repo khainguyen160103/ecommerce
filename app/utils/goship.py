@@ -4,10 +4,12 @@ API v2: https://sandbox.goship.io/api/v2
 Location API: https://provinces.open-api.vn/api/ (fallback do GoShip sandbox không ổn định)
 """
 import httpx
+import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from app.core.settings import settings
 
+logger = logging.getLogger(__name__)
 
 PROVINCES_API = "https://provinces.open-api.vn/api"
 
@@ -31,23 +33,27 @@ class GoShipClient:
         if self._access_token and self._token_expires_at and now < self._token_expires_at:
             return self._access_token
 
-        response = httpx.post(
-            f"{self.base_url}/login",
-            json={
-                "client_id": self.client_id,
-                "client_secret": self.client_secret,
-            },
-            timeout=5,
-            follow_redirects=True,
-        )
-        response.raise_for_status()
-        data = response.json()
+        try:
+            response = httpx.post(
+                f"{self.base_url}/login",
+                json={
+                    "client_id": self.client_id,
+                    "client_secret": self.client_secret,
+                },
+                timeout=10,
+                follow_redirects=True,
+            )
+            response.raise_for_status()
+            data = response.json()
 
-        self._access_token = data.get("access_token")
-        expires_in = data.get("expires_in", 3600)
-        self._token_expires_at = now + timedelta(seconds=expires_in - 60)
+            self._access_token = data.get("access_token")
+            expires_in = data.get("expires_in", 3600)
+            self._token_expires_at = now + timedelta(seconds=expires_in - 60)
 
-        return self._access_token
+            return self._access_token
+        except Exception as e:
+            logger.error(f"GoShip login failed: {e}")
+            raise RuntimeError(f"GoShip sandbox không khả dụng: {e}")
 
     def _headers(self) -> Dict[str, str]:
         """Headers với Bearer token"""

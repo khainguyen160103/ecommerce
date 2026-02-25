@@ -16,6 +16,7 @@ from app.routers.order_router import orderRouter
 from app.routers.address_router import addressRouter
 from app.routers.checkout_router import checkoutRouter
 from app.routers.goship_router import goshipRouter
+from app.routers.chatbot_router import chatbotRouter
 from app.core.cloudinary import cloud_config
 app = FastAPI(
     title="E-Commerce API",
@@ -53,6 +54,7 @@ app.include_router(orderRouter, prefix=PREFIX)
 app.include_router(addressRouter, prefix=PREFIX)
 app.include_router(checkoutRouter, prefix=PREFIX)
 app.include_router(goshipRouter, prefix=PREFIX)
+app.include_router(chatbotRouter, prefix=PREFIX)
 
 
 @app.get("/")

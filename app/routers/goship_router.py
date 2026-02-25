@@ -13,7 +13,7 @@ from app.repositories.order_repository import OrderRepository
 from app.repositories.address_repository import AddressRepository
 from app.core.settings import settings
 from typing import Dict, Any, Annotated, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 goshipRouter = APIRouter(prefix="/goship", tags=["GoShip - Vận chuyển"])
 
@@ -211,10 +211,27 @@ def create_shipment(
             "goship_data": result,
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Lỗi tạo đơn GoShip: {str(e)}"
-        )
+        # Fallback: GoShip sandbox không khả dụng → tạo vận đơn nội bộ
+        fallback_code = f"LOCAL-{uuid4().hex[:12].upper()}"
+        fallback_tracking = f"TRK-{uuid4().hex[:10].upper()}"
+
+        order.shipping_code = fallback_code
+        order.tracking_number = fallback_tracking
+        order.carrier = "Nội bộ (GoShip offline)"
+        order.rate_id = data.rate_id
+        order.status = "shipping"
+        session.add(order)
+        session.commit()
+
+        return {
+            "message": "GoShip sandbox không khả dụng. Đã tạo vận đơn nội bộ.",
+            "order_id": str(order.id),
+            "shipping_code": order.shipping_code,
+            "tracking_number": order.tracking_number,
+            "carrier": order.carrier,
+            "fallback": True,
+            "goship_error": str(e),
+        }
 
 
 @goshipRouter.get("/shipments/{order_id}/tracking", summary="[USER/ADMIN] Tracking đơn vận chuyển")

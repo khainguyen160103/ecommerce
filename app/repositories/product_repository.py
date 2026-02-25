@@ -1,4 +1,4 @@
-from sqlmodel import Session, select
+from sqlmodel import Session, select, or_
 from fastapi import HTTPException
 from typing import Any
 from sqlalchemy.orm import selectinload , joinedload
@@ -88,3 +88,21 @@ class ProductRepository :
         session.delete(detail)
         session.commit()
 
+    def search(
+        self, keyword: str, session: Session, skip: int = 0, limit: int = 20
+    ) -> List[Product]:
+        """Tìm kiếm sản phẩm theo tên hoặc mô tả"""
+        stmt = (
+            select(Product)
+            .options(joinedload(Product.category), selectinload(Product.images))
+            .where(
+                or_(
+                    Product.name.ilike(f"%{keyword}%"),
+                    Product.description.ilike(f"%{keyword}%"),
+                )
+            )
+            .offset(skip)
+            .limit(limit)
+        )
+        products = session.exec(stmt).all()
+        return products

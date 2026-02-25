@@ -9,7 +9,7 @@ from app.core.database import get_session
 from app.models.user_model import User
 from app.services.checkout_service import CheckoutService
 from app.deps.auth_dependency import get_current_user
-from typing import Dict, Any, Annotated, Optional
+from typing import Dict, Any, Annotated, Optional, List
 
 checkoutRouter = APIRouter(prefix="/checkout", tags=["Checkout"])
 
@@ -22,6 +22,7 @@ class CheckoutRequest(BaseModel):
     note: str = ""
     rate_id: Optional[str] = None  # GoShip rate ID
     shipping_fee: int = 0  # Phí vận chuyển
+    item_ids: Optional[List[str]] = None  # Danh sách cart item IDs đã chọn
 
 
 class ShippingRateRequest(BaseModel):
@@ -59,6 +60,7 @@ def create_checkout(
         client_ip=client_ip,
         rate_id=data.rate_id,
         shipping_fee=data.shipping_fee,
+        item_ids=data.item_ids,
     )
 
 
@@ -114,12 +116,16 @@ def get_order_preview(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[CheckoutService, Depends()],
+    item_ids: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     [USER] Xem trước đơn hàng trước khi thanh toán
+    - item_ids: comma-separated cart item IDs (nếu không truyền = toàn bộ giỏ hàng)
     - Trả về thông tin giỏ hàng, địa chỉ, tổng tiền
     """
+    parsed_item_ids = item_ids.split(",") if item_ids else None
     return service.get_order_preview(
         user=current_user,
         session=session,
+        item_ids=parsed_item_ids,
     )
