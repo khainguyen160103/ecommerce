@@ -1,0 +1,252 @@
+# Kế hoạch: Luồng Cart → Checkout → Payment
+
+## Tổng quan
+
+Hiện tại cart page đã có (`/cart`) nhưng khi nhấn "Mua Hàng" thì tạo order luôn và redirect sang profile/orders — **chưa có trang Checkout** để người dùng xác nhận địa chỉ, chọn phương thức thanh toán. Cần thêm 2 trang mới và tích hợp payment gateway (VNPay hoặc Stripe).
+
+**Luồng mới:**
+```
+/cart  →  /checkout  →  [Payment Gateway]  →  /payment/result?status=success|failed
+```
+
+---
+
+## Sơ đồ luồng
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant FE
+    participant BE
+    participant PayGW as Payment Gateway
+
+    User->>FE: Nhấn "Mua Hàng" ở Cart
+    FE->>BE: POST /orders/ (tạo order với status=PENDING)
+    BE-->>FE: { order_id, total_amount, ... }
+    FE->>FE: Redirect → /checkout?orderId=xxx
+    User->>FE: Chọn địa chỉ, phương thức thanh toán → Xác nhận
+    FE->>BE: POST /payments/create { order_id, method }
+    BE->>PayGW: Tạo payment session
+    PayGW-->>BE: { payment_url, payment_id }
+    BE-->>FE: { payment_url }
+    FE->>User: Redirect → payment_url (trang Gateway)
+    User->>PayGW: Thực hiện thanh toán
+    PayGW->>BE: Webhook POST /payments/webhook { payment_id, status }
+    BE->>BE: Cập nhật Order status → PAID / FAILED
+    PayGW->>FE: Redirect → /payment/result?status=success&orderId=xxx
+    FE->>User: Hiển thị kết quả thanh toán
+```
+
+---
+
+## Lựa chọn Payment Gateway
+
+| Gateway | Phù hợp | Ghi chú |
+|---|---|---|
+| **VNPay** | 🇻🇳 Việt Nam | Phổ biến nhất VN, hỗ trợ ATM/QR/VISA |
+| **Stripe** | Quốc tế | Dễ tích hợp, sandbox tốt, có thẻ test |
+| **MoMo** | 🇻🇳 Việt Nam | Ví điện tử phổ biến |
+
+> **Khuyến nghị:** Dùng **VNPay** nếu target thị trường VN, **Stripe** nếu muốn tích hợp nhanh và test dễ.
+
+---
+
+## FRONTEND — Các thay đổi cần làm
+
+### 1. Trang Checkout `/checkout`
+
+#### [NEW] `src/app/(shop)/checkout/page.tsx`
+Trang xác nhận đơn hàng trước khi thanh toán, gồm:
+- **Phần địa chỉ giao hàng**: hiển thị địa chỉ hiện tại từ user profile, có nút "Thay đổi"
+- **Phần tóm tắt đơn hàng**: danh sách sản phẩm, số lượng, giá (lấy từ order vừa tạo)
+- **Phần chọn phương thức thanh toán**: Radio group gồm:
+  - 💳 Thanh toán online (VNPay / Stripe)
+  - 💵 Thanh toán khi nhận hàng (COD)
+- **Nút "Đặt hàng"**: gọi API tạo payment session
+
+**Dữ liệu truyền qua URL:** `?orderId=xxx` (lấy từ kết quả tạo order ở cart page)
+
+#### [NEW] `src/app/(shop)/payment/result/page.tsx`
+Trang kết quả sau khi Gateway redirect về:
+- Đọc query params: `?status=success|failed&orderId=xxx`
+- Nếu `success`: hiển thị thông báo thành công, nút "Xem đơn hàng"
+- Nếu `failed`: hiển thị lỗi, nút "Thử lại" hoặc "Về trang chủ"
+
+---
+
+### 2. Cập nhật Cart Page
+
+#### [MODIFY] `src/app/(shop)/cart/page.tsx`
+Thay đổi hàm [handleCheckout](file:///d:/Freelancer/E-commerce/fe-ecommerce/src/app/%28shop%29/cart/page.tsx#75-106):
+```diff
+- createOrder(undefined, {
+-   onSuccess: (data) => {
+-     router.push(`/profile/order/${data.id}`)
+-   }
+- })
++ createOrder(undefined, {
++   onSuccess: (data) => {
++     // Không redirect sang order ngay, mà sang trang checkout
++     router.push(`/checkout?orderId=${data.id}`)
++   }
++ })
+```
+
+---
+
+### 3. API Request Layer
+
+#### [NEW] `src/requests/payment.ts`
+```typescript
+// POST /payments/create → trả về { payment_url }
+export const createPayment = async (data: { order_id: string; method: string }) => { ... }
+
+// GET /payments/{payment_id} → kiểm tra trạng thái
+export const getPaymentStatus = async (paymentId: string) => { ... }
+```
+
+#### [MODIFY] [src/requests/endpoint.ts](file:///d:/Freelancer/E-commerce/fe-ecommerce/src/requests/endpoint.ts)
+Thêm PAYMENT endpoints:
+```typescript
+PAYMENT: {
+    CREATE: 'payments/create',
+    GET_BY_ID: (id) => `payments/${id}`,
+    WEBHOOK: 'payments/webhook',
+}
+```
+
+---
+
+### 4. Custom Hook
+
+#### [NEW] `src/hook/usePayment.ts`
+```typescript
+export const usePayment = () => {
+  // useMutation: createPayment → redirect đến payment_url
+  const useCreatePayment = () => { ... }
+  // useQuery: lấy trạng thái payment (dùng ở result page)
+  const useGetPaymentStatus = (paymentId: string) => { ... }
+  return { useCreatePayment, useGetPaymentStatus }
+}
+```
+
+---
+
+### 5. Type Definitions
+
+#### [MODIFY] [src/types/index.ts](file:///d:/Freelancer/E-commerce/fe-ecommerce/src/types/index.ts)
+Thêm:
+```typescript
+export type PaymentMethod = 'VNPAY' | 'STRIPE' | 'COD'
+export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED'
+```
+
+---
+
+## BACKEND — Các thay đổi cần làm
+
+> Backend hiện dùng **FastAPI** (dựa trên conversation trước). Cần thêm một payment service module.
+
+### 1. Payment Model / Table
+
+#### [NEW] `payment` table (Alembic migration)
+```
+id          UUID (PK)
+order_id    UUID (FK → orders)
+method      Enum: VNPAY | STRIPE | COD
+status      Enum: PENDING | PAID | FAILED | REFUNDED
+amount      Decimal
+gateway_ref VARCHAR   -- transaction ID từ gateway
+created_at  DateTime
+updated_at  DateTime
+```
+
+---
+
+### 2. Payment Endpoints
+
+#### [NEW] `POST /api/payments/create`
+- Nhận: `{ order_id, method }`
+- Kiểm tra order thuộc về user đang login
+- Nếu method = COD: cập nhật order status → CONFIRMED, trả về success
+- Nếu method = VNPAY/STRIPE: gọi SDK tạo payment session, trả về `{ payment_url, payment_id }`
+
+#### [NEW] `GET /api/payments/{payment_id}`
+- Trả về trạng thái payment hiện tại
+
+#### [NEW] `POST /api/payments/webhook`
+- Endpoint **không cần auth** nhưng cần **verify signature** từ Gateway
+- Nhận callback từ VNPay/Stripe
+- Cập nhật payment status trong DB
+- Gọi service cập nhật order status tương ứng
+
+---
+
+### 3. Cập nhật Order
+
+#### [MODIFY] Order status flow
+```
+PENDING → CONFIRMED (sau khi thanh toán thành công hoặc COD)
+PENDING → FAILED (nếu thanh toán thất bại)
+CONFIRMED → SHIPPED → DELIVERED
+CONFIRMED → CANCELLED
+```
+
+---
+
+### 4. Bảo mật Webhook
+
+> [!IMPORTANT]
+> Webhook từ Gateway phải được **verify chữ ký (signature)** để tránh giả mạo.
+> - **VNPay**: verify `vnp_SecureHash` bằng HMAC-SHA512
+> - **Stripe**: verify `Stripe-Signature` header bằng `stripe.webhooks.construct_event()`
+
+---
+
+### 5. Biến môi trường cần thêm
+
+```env
+# VNPay
+VNPAY_TMN_CODE=your_tmn_code
+VNPAY_HASH_SECRET=your_hash_secret
+VNPAY_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+VNPAY_RETURN_URL=http://localhost:3000/payment/result
+
+# Stripe (nếu dùng)
+STRIPE_SECRET_KEY=sk_test_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+STRIPE_SUCCESS_URL=http://localhost:3000/payment/result?status=success
+STRIPE_CANCEL_URL=http://localhost:3000/payment/result?status=failed
+```
+
+---
+
+## Tóm tắt file cần tạo/sửa
+
+### Frontend
+| File | Hành động |
+|---|---|
+| `src/app/(shop)/checkout/page.tsx` | 🆕 Tạo mới |
+| `src/app/(shop)/payment/result/page.tsx` | 🆕 Tạo mới |
+| `src/requests/payment.ts` | 🆕 Tạo mới |
+| `src/hook/usePayment.ts` | 🆕 Tạo mới |
+| [src/requests/endpoint.ts](file:///d:/Freelancer/E-commerce/fe-ecommerce/src/requests/endpoint.ts) | ✏️ Sửa - thêm PAYMENT endpoints |
+| `src/app/(shop)/cart/page.tsx` | ✏️ Sửa - redirect sang /checkout |
+
+### Backend
+| File/Module | Hành động |
+|---|---|
+| `payment` model + migration | 🆕 Tạo mới |
+| `payments/router.py` | 🆕 Tạo mới |
+| `payments/service.py` | 🆕 Tạo mới |
+| `payments/schemas.py` | 🆕 Tạo mới |
+| Order status logic | ✏️ Sửa |
+| `.env` | ✏️ Sửa - thêm biến Gateway |
+
+---
+
+## Câu hỏi cần xác nhận trước khi code
+
+1. **Bạn muốn dùng gateway nào?** VNPay (phổ biến VN) hay Stripe (dễ test với sandbox)?
+2. **COD (thanh toán khi nhận hàng)** có cần không?
+3. **Địa chỉ giao hàng** — user profile hiện có lưu địa chỉ chưa, hay cần người dùng nhập tại trang checkout?

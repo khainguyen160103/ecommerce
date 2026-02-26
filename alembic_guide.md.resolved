@@ -1,0 +1,242 @@
+# 📘 Hướng dẫn sử dụng Alembic - Từng bước
+
+## Bước 1: Cài đặt Alembic
+
+```bash
+pip install alembic
+```
+
+Kiểm tra đã cài thành công:
+```bash
+alembic --version
+```
+
+---
+
+## Bước 2: Khởi tạo Alembic
+
+Trong thư mục project của bạn:
+```bash
+cd d:\Freelancer\E-commerce\ECOMMERCE-BE-fast
+alembic init alembic
+```
+
+**Kết quả:** Tạo ra cấu trúc:
+```
+ECOMMERCE-BE-fast/
+├── alembic/
+│   ├── versions/          # Chứa migration files
+│   ├── env.py            # ✅ Bạn đã tạo rồi
+│   └── script.py.mako    # Template
+├── alembic.ini           # ✅ Bạn đã tạo rồi
+```
+
+---
+
+## Bước 3: Kiểm tra cấu hình
+
+### ✅ File [alembic.ini](file:///d:/Freelancer/E-commerce/ECOMMERCE-BE-fast/alembic.ini) (dòng 87):
+```ini
+sqlalchemy.url = mysql+pymysql://root:162003@localhost:3306/ecommerce
+```
+
+### ✅ File [alembic/env.py](file:///d:/Freelancer/E-commerce/ECOMMERCE-BE-fast/alembic/env.py) (dòng 8-10):
+```python
+from sqlmodel import SQLModel
+from app.models.role_model import Role
+from app.models.user_model import User
+```
+
+### ✅ File [alembic/env.py](file:///d:/Freelancer/E-commerce/ECOMMERCE-BE-fast/alembic/env.py) (dòng 24):
+```python
+target_metadata = SQLModel.metadata
+```
+
+**Bạn đã cấu hình đúng rồi!** ✅
+
+---
+
+## Bước 4: Tạo migration đầu tiên
+
+Chạy lệnh để Alembic tự động phát hiện models:
+
+```bash
+alembic revision --autogenerate -m "Initial migration with user and role tables"
+```
+
+**Alembic sẽ:**
+1. So sánh models Python với database hiện tại
+2. Tạo file migration trong `alembic/versions/`
+3. File có tên dạng: `xxxx_initial_migration_with_user_and_role_tables.py`
+
+---
+
+## Bước 5: Xem migration file
+
+Mở file vừa tạo trong `alembic/versions/`, bạn sẽ thấy:
+
+```python
+def upgrade() -> None:
+    # Tạo tables
+    op.create_table('role',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('description', sa.String(), nullable=False),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('user',
+        sa.Column('id', sa.String(), nullable=False),
+        sa.Column('name', sa.String(), nullable=False),
+        # ... các columns khác
+    )
+
+def downgrade() -> None:
+    # Xóa tables (rollback)
+    op.drop_table('user')
+    op.drop_table('role')
+```
+
+**Review migration này để đảm bảo đúng!**
+
+---
+
+## Bước 6: Chạy migration
+
+Apply migration lên database:
+
+```bash
+alembic upgrade head
+```
+
+**Kết quả:**
+```
+INFO  [alembic.runtime.migration] Running upgrade -> xxxx, Initial migration
+```
+
+Kiểm tra database, bạn sẽ thấy:
+- ✅ Bảng `role` đã được tạo
+- ✅ Bảng [user](file:///d:/Freelancer/E-commerce/ECOMMERCE-BE-fast/app/services/user_services.py#33-35) đã được tạo
+- ✅ Bảng `alembic_version` (track migrations)
+
+---
+
+## Bước 7: Xem lịch sử migrations
+
+```bash
+# Xem tất cả migrations
+alembic history
+
+# Xem migration hiện tại
+alembic current
+```
+
+---
+
+## 🔄 Workflow khi thay đổi models
+
+### Ví dụ: Thêm field `phone` vào User
+
+**1. Sửa model:**
+```python
+# app/models/user_model.py
+class User(UserBase, table=True):
+    # ... các fields cũ
+    phone: str | None = None  # ← Field mới
+```
+
+**2. Tạo migration:**
+```bash
+alembic revision --autogenerate -m "Add phone field to user"
+```
+
+**3. Review migration file:**
+```python
+def upgrade():
+    op.add_column('user', sa.Column('phone', sa.String(), nullable=True))
+
+def downgrade():
+    op.drop_column('user', 'phone')
+```
+
+**4. Apply migration:**
+```bash
+alembic upgrade head
+```
+
+---
+
+## 📋 Các lệnh Alembic thường dùng
+
+| Lệnh | Mô tả |
+|------|-------|
+| `alembic revision --autogenerate -m "message"` | Tạo migration tự động |
+| `alembic upgrade head` | Upgrade lên version mới nhất |
+| `alembic upgrade +1` | Upgrade 1 version |
+| `alembic downgrade -1` | Downgrade 1 version |
+| `alembic downgrade base` | Downgrade về đầu (xóa hết) |
+| `alembic current` | Xem version hiện tại |
+| `alembic history` | Xem lịch sử migrations |
+| `alembic history --verbose` | Xem chi tiết |
+
+---
+
+## ⚠️ Lưu ý quan trọng
+
+### ❌ Không làm:
+- Xóa migration files đã apply
+- Sửa migration files đã apply
+- Chạy migrations trực tiếp trên production mà không test
+
+### ✅ Nên làm:
+- Luôn review migration files trước khi apply
+- Backup database trước khi migrate production
+- Commit migration files vào Git
+- Test migrations trên local/staging trước
+
+---
+
+## 🧪 Test Alembic
+
+### Test 1: Upgrade
+```bash
+alembic upgrade head
+```
+
+### Test 2: Downgrade
+```bash
+alembic downgrade -1
+```
+
+### Test 3: Upgrade lại
+```bash
+alembic upgrade head
+```
+
+Nếu cả 3 test đều OK → Alembic đã setup đúng! ✅
+
+---
+
+## 🔧 Troubleshooting
+
+### Lỗi: "Can't locate revision identified by 'xxxx'"
+**Giải pháp:** Xóa bảng `alembic_version` và chạy lại `alembic upgrade head`
+
+### Lỗi: "Target database is not up to date"
+**Giải pháp:** Chạy `alembic upgrade head`
+
+### Lỗi: Import models không được
+**Giải pháp:** Kiểm tra [alembic.ini](file:///d:/Freelancer/E-commerce/ECOMMERCE-BE-fast/alembic.ini) có `prepend_sys_path = .`
+
+---
+
+## ✅ Checklist hoàn thành
+
+- [ ] Cài đặt Alembic
+- [ ] Khởi tạo Alembic
+- [ ] Kiểm tra [alembic.ini](file:///d:/Freelancer/E-commerce/ECOMMERCE-BE-fast/alembic.ini) và [env.py](file:///d:/Freelancer/E-commerce/ECOMMERCE-BE-fast/alembic/env.py)
+- [ ] Tạo migration đầu tiên
+- [ ] Review migration file
+- [ ] Chạy `alembic upgrade head`
+- [ ] Kiểm tra database có tables
+- [ ] Test downgrade và upgrade
+
+**Sau khi hoàn thành, bạn đã sẵn sàng dùng Alembic!** 🎉
