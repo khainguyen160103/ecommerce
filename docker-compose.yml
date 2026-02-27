@@ -21,6 +21,32 @@ services:
       - mysql
     volumes:
       - ./ECOMMERCE-BE-fast:/app
+  
+  # frontend:
+  #   build:
+  #     context: ./fe-ecommerce
+  #   container_name: ecommerce-frontend
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NODE_ENV=production
 
+  frontend-dev:
+    build:
+      context: ./fe-ecommerce
+      target: builder
+    container_name: ecommerce-frontend-dev
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./fe-ecommerce:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+    profiles:
+      - dev
 volumes:
   mysql_data:
+
