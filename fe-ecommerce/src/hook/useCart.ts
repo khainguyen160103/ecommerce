@@ -23,11 +23,11 @@ export const useCart = () => {
   const useAddToCart = () => {
     return useMutation({
       mutationFn: (data: cartService.AddToCartRequest) => cartService.addToCart(data),
-      onSuccess: (data) => {
+      onSuccess: () => {
         message.success('Đã thêm sản phẩm vào giỏ hàng!');
-        queryClient.setQueryData(['myCart'], data);
+        // Backend trả về { message, cart_item } - KHÔNG phải full cart.
+        // Chỉ invalidate để refetch full cart, tránh ghi đè cache với cấu trúc sai.
         queryClient.invalidateQueries({ queryKey: ['myCart'] });
-        return data;
       },
       onError: (error: any) => {
         const errorMessage = error.response?.data?.detail || 'Không thể thêm sản phẩm vào giỏ hàng';

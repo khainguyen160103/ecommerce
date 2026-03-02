@@ -11,6 +11,7 @@ import {
   Spin,
   Empty,
   Tooltip,
+  Tag,
 } from 'antd';
 import { EyeOutlined, ReloadOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import Link from 'next/link';
@@ -40,8 +41,20 @@ export default function OrderPage() {
     statusFilter
   );
 
-  const orders = ordersData?.orders || [];
-  const totalOrders = ordersData?.total || 0;
+  const allOrders = ordersData?.orders || [];
+
+  // Semantic search - lọc theo mã đơn hàng, email, trạng thái
+  const filteredOrders = allOrders.filter(order => {
+    const searchLower = searchText.toLowerCase();
+    return (
+      order.id.toLowerCase().includes(searchLower) ||
+      (order.user_email && order.user_email.toLowerCase().includes(searchLower)) ||
+      order.status.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const orders = filteredOrders;
+  const totalOrders = filteredOrders.length;
 
   const columns = [
     {
@@ -119,11 +132,15 @@ export default function OrderPage() {
           {/* Filters */}
           <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
             <Col xs={24} sm={12}>
-              <Input
-                placeholder="Tìm mã đơn hàng, email..."
+            <Input.Search
+              placeholder="Tìm mã đơn hàng, email, trạng thái..."
                 value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
+              onChange={(e) => {
+                setSearchText(e.target.value);
+                setPageIndex(0);
+              }}
                 allowClear
+              enterButton
               />
             </Col>
             <Col xs={24} sm={12}>
@@ -132,10 +149,26 @@ export default function OrderPage() {
                 placeholder="Lọc theo trạng thái"
                 options={ORDER_STATUSES}
                 value={statusFilter}
-                onChange={setStatusFilter}
+              onChange={(value) => {
+                setStatusFilter(value);
+                setPageIndex(0);
+              }}
               />
             </Col>
           </Row>
+
+        {/* Search Results Indicator */}
+        {searchText && (
+          <div style={{ marginBottom: 16 }}>
+            <Tag
+              closable
+              onClose={() => setSearchText('')}
+              color="blue"
+            >
+              Kết quả tìm kiếm: {totalOrders} đơn hàng
+            </Tag>
+          </div>
+        )}
 
           {/* Table */}
           {isLoading ? (

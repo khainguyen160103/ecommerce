@@ -1,4 +1,4 @@
-import { PackageSearch, ShoppingBasket, Truck, Users, Warehouse } from "lucide-react";
+import { BarChart3, PackageSearch, ShoppingBasket, Truck, Users, Warehouse } from "lucide-react";
 
 export const menuItems = [
   {
@@ -30,5 +30,11 @@ export const menuItems = [
     icon: <Truck />,
     label: "Quản lý giao hàng",
     href: "/admin/delivery",
+  },
+  {
+    key: "reports",
+    icon: <BarChart3 />,
+    label: "Báo cáo doanh thu",
+    href: "/admin/reports",
   },
 ];

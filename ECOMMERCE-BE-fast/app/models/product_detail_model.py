@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .product_model import Product
     from .cart_item_model import CartItem
+    from .order_item_model import OrderItem
     
 class ProductDetailBase(SQLModel):
     color: str | None = None
@@ -36,4 +37,5 @@ class ProductDetail(ProductDetailBase, table=True):
 
     # Relationships
     product: "Product" = Relationship(back_populates="product_details")
-    cart_items: list["CartItem"] = Relationship(back_populates="product_detail") 
+    cart_items: list["CartItem"] = Relationship(back_populates="product_detail")
+    order_items: list["OrderItem"] = Relationship(back_populates="product_detail")

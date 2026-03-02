@@ -1,7 +1,15 @@
 """
 GoShip API Client - Tích hợp dịch vụ vận chuyển GoShip
 API v2: https://sandbox.goship.io/api/v2
+
+IMPORTANT: GoShip yêu cầu login để lấy access token trước khi gọi API
+- Auth endpoint: https://sandbox.goship.io/api/v2/login
+- Body: username, password, client_id, client_secret
+- API endpoints: https://sandbox.goship.io/api/v2/*
+
 Location API: https://provinces.open-api.vn/api/ (fallback do GoShip sandbox không ổn định)
+
+NOTE: GoShip sandbox có thể không ổn định, fallback mechanism đã được implement trong router
 """
 import httpx
 import logging
@@ -19,9 +27,12 @@ class GoShipClient:
 
     _access_token: Optional[str] = None
     _token_expires_at: Optional[datetime] = None
+    _refresh_token: Optional[str] = None
 
     def __init__(self):
         self.base_url = settings.GOSHIP_API_URL
+        self.username = settings.GOSHIP_USERNAME
+        self.password = settings.GOSHIP_PASSWORD
         self.client_id = settings.GOSHIP_CLIENT_ID
         self.client_secret = settings.GOSHIP_CLIENT_SECRET
 
@@ -33,10 +44,19 @@ class GoShipClient:
         if self._access_token and self._token_expires_at and now < self._token_expires_at:
             return self._access_token
 
+        if not self.username or not self.password:
+            raise RuntimeError(
+                "Thiếu cấu hình GoShip login: GOSHIP_USERNAME/GOSHIP_PASSWORD"
+            )
+
         try:
+            login_url = f"{self.base_url}/login"
+
             response = httpx.post(
-                f"{self.base_url}/login",
+                login_url,
                 json={
+                    "username": self.username,
+                    "password": self.password,
                     "client_id": self.client_id,
                     "client_secret": self.client_secret,
                 },
@@ -47,13 +67,23 @@ class GoShipClient:
             data = response.json()
 
             self._access_token = data.get("access_token")
+            self._refresh_token = data.get("refresh_token")
+            if not self._access_token:
+                raise RuntimeError("GoShip login không trả về access_token")
+
             expires_in = data.get("expires_in", 3600)
             self._token_expires_at = now + timedelta(seconds=expires_in - 60)
 
+            logger.info("GoShip login successful")
             return self._access_token
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "GoShip login failed: %s - %s", e.response.status_code, e.response.text
+            )
+            raise RuntimeError(f"GoShip login failed: {e.response.status_code}") from e
         except Exception as e:
-            logger.error(f"GoShip login failed: {e}")
-            raise RuntimeError(f"GoShip sandbox không khả dụng: {e}")
+            logger.error("GoShip login failed: %s", str(e))
+            raise RuntimeError(f"GoShip không khả dụng: {e}") from e
 
     def _headers(self) -> Dict[str, str]:
         """Headers với Bearer token"""
@@ -158,64 +188,111 @@ class GoShipClient:
     def create_shipment(
         self,
         rate_id: str,
+        order_id: str,
+        payer: int,
         from_name: str,
         from_phone: str,
         from_street: str,
-        from_ward: int,
-        from_district: int,
-        from_city: int,
+        from_ward: str,
+        from_district: str,
+        from_city: str,
         to_name: str,
         to_phone: str,
         to_street: str,
-        to_ward: int,
-        to_district: int,
-        to_city: int,
+        to_ward: str,
+        to_district: str,
+        to_city: str,
         cod: int = 0,
-        weight: int = 500,
+        amount: int = 0,
+        weight: str = "500",
+        width: str = "15",
+        height: str = "15",
+        length: str = "15",
         metadata: str = "",
     ) -> Dict[str, Any]:
         """
         Tạo đơn vận chuyển trên GoShip
         Args:
             rate_id: ID của rate đã chọn (từ get_rates)
+            order_id: Mã đơn hàng
+            payer: 0 = người nhận trả phí, 1 = người gửi trả phí
             from/to: Thông tin địa chỉ gửi/nhận
+            cod: Tiền thu hộ (VND)
+            amount: Giá trị hàng hóa (VND)
+            weight/width/height/length: Thông tin kiện hàng (string)
+            metadata: Ghi chú kiện hàng
         Returns:
             Thông tin shipment (id, tracking_number, ...)
         """
+        payload = {
+            "shipment": {
+                "rate": rate_id,
+                "payer": payer,
+                "order_id": order_id,
+                "address_from": {
+                    "name": from_name,
+                    "phone": from_phone,
+                    "street": from_street,
+                    "ward": str(from_ward),
+                    "district": str(from_district),
+                    "city": str(from_city),
+                },
+                "address_to": {
+                    "name": to_name,
+                    "phone": to_phone,
+                    "street": to_street,
+                    "ward": str(to_ward),
+                    "district": str(to_district),
+                    "city": str(to_city),
+                },
+                "parcel": {
+                    "cod": cod,
+                    "amount": amount,
+                    "weight": str(weight),
+                    "width": str(width),
+                    "height": str(height),
+                    "length": str(length),
+                    "metadata": metadata,
+                },
+            }
+        }
+        logger.info("GoShip create_shipment payload: %s", payload)
+        print(f"[GoShip] Creating shipment with payload: {payload}")
+
         response = httpx.post(
             f"{self.base_url}/shipments",
             headers=self._headers(),
-            json={
-                "shipment": {
-                    "rate": rate_id,
-                    "address_from": {
-                        "name": from_name,
-                        "phone": from_phone,
-                        "street": from_street,
-                        "ward": from_ward,
-                        "district": from_district,
-                        "city": from_city,
-                    },
-                    "address_to": {
-                        "name": to_name,
-                        "phone": to_phone,
-                        "street": to_street,
-                        "ward": to_ward,
-                        "district": to_district,
-                        "city": to_city,
-                    },
-                    "parcel": {
-                        "cod": cod,
-                        "weight": weight,
-                        "metadata": metadata,
-                    },
-                }
-            },
+            json=payload,
             timeout=30,
+            follow_redirects=True,
         )
-        response.raise_for_status()
+
+        # Log response chi tiết để debug
+        print(f"[GoShip] Response status: {response.status_code}")
+        print(f"[GoShip] Response body: {response.text}")
+
+        if response.status_code >= 400:
+            logger.error(
+                "GoShip create_shipment failed: %s - %s",
+                response.status_code,
+                response.text,
+            )
+            raise RuntimeError(
+                f"GoShip API error {response.status_code}: {response.text}"
+            )
+
         data = response.json()
-        return data.get("data", data) if isinstance(data, dict) else data
+        payload = data.get("data", data) if isinstance(data, dict) else data
+
+        # GoShip tạo vận đơn theo cơ chế async: HTTP 200 OK nhưng có thể có lỗi nghiệp vụ
+        # Theo tài liệu: shipment_status = 900 là "Đơn mới" (bình thường)
+        # CHỈ KHI có carrier_error thì mới là lỗi thực sự
+        if isinstance(payload, dict):
+            carrier_error = payload.get("carrier_error")
+            if carrier_error:
+                raise RuntimeError(f"GoShip carrier error: {carrier_error}")
+
+        return payload
 
     def get_shipment(self, shipment_id: str) -> Dict[str, Any]:
         """Lấy thông tin chi tiết + tracking của đơn vận chuyển"""
@@ -229,9 +306,9 @@ class GoShipClient:
         return data.get("data", data) if isinstance(data, dict) else data
 
     def cancel_shipment(self, shipment_id: str) -> Dict[str, Any]:
-        """Hủy đơn vận chuyển"""
-        response = httpx.patch(
-            f"{self.base_url}/shipments/{shipment_id}/cancel",
+        """Hủy đơn vận chuyển theo tài liệu GoShip (DELETE /shipments/{id})"""
+        response = httpx.delete(
+            f"{self.base_url}/shipments/{shipment_id}",
             headers=self._headers(),
             timeout=15,
         )

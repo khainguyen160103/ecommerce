@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { Form, Input, Button, Card, Row, Col, Avatar, Space, Spin, message, Modal } from 'antd'
-import { EditOutlined, SaveOutlined, CloseOutlined, LogoutOutlined, ShoppingOutlined, LockOutlined } from '@ant-design/icons'
+import { EditOutlined, SaveOutlined, CloseOutlined, LogoutOutlined, ShoppingOutlined, LockOutlined, HomeOutlined } from '@ant-design/icons'
 import { useUsers } from '@/hook/useUser'
 import { Authorization, TokenService } from '@/utils/auth.utils'
 import { AuthService } from '@/requests/auth'
@@ -245,6 +245,13 @@ export default function ProfilePage() {
                             icon={<ShoppingOutlined />}
                           >
                             Đơn hàng
+                          </Button>
+                        </Link>
+                        <Link href="/">
+                          <Button
+                            icon={<HomeOutlined />}
+                          >
+                            Trang chủ
                           </Button>
                         </Link>
                         <Button

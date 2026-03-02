@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     
     # GoShip Configuration
     GOSHIP_API_URL: str = "https://sandbox.goship.io/api/v2"
+    GOSHIP_USERNAME: str = ""
+    GOSHIP_PASSWORD: str = ""
     GOSHIP_CLIENT_ID: int = 0
     GOSHIP_CLIENT_SECRET: str = ""
     

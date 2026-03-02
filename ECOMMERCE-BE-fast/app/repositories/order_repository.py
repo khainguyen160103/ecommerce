@@ -10,6 +10,7 @@ from app.models.order_item_model import OrderItem
 from app.models.cart_model import Cart
 from app.models.cart_item_model import CartItem
 from app.models.product_model import Product
+from app.models.product_detail_model import ProductDetail
 from app.models.user_model import User
 from app.enum.role_enum import OrderStatus
 
@@ -135,3 +136,40 @@ class OrderRepository:
         return session.exec(
             select(User).where(User.id == user_id)
         ).first()
+
+    # ==================== INVENTORY FUNCTIONS ====================
+
+    def get_product_detail_by_id(
+        self, detail_id: UUID, session: Session
+    ) -> ProductDetail | None:
+        """Lấy chi tiết sản phẩm theo ID"""
+        return session.exec(
+            select(ProductDetail).where(ProductDetail.id == detail_id)
+        ).first()
+
+    def reduce_product_stock(
+        self, detail_id: UUID, quantity: int, session: Session
+    ) -> bool:
+        """
+        Giảm stock của product detail
+        Returns: True nếu thành công, False nếu không đủ stock
+        """
+        detail = self.get_product_detail_by_id(detail_id, session)
+        if not detail:
+            return False
+
+        if detail.stock < quantity:
+            return False
+
+        detail.stock -= quantity
+        session.add(detail)
+        return True
+
+    def restore_product_stock(
+        self, detail_id: UUID, quantity: int, session: Session
+    ) -> None:
+        """Hoàn trả stock khi hủy đơn"""
+        detail = self.get_product_detail_by_id(detail_id, session)
+        if detail:
+            detail.stock += quantity
+            session.add(detail)

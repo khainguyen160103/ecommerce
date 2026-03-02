@@ -4,8 +4,6 @@ import {
     MenuFoldOutlined,
     MenuUnfoldOutlined,
 } from '@ant-design/icons';
-import { Bell } from 'lucide-react';
-import Notification from './Notification';
 
 export default function HeaderAdminLayout({ colorBgContainer,  collapsed , setCollapsed}) {
   return (
@@ -20,7 +18,7 @@ export default function HeaderAdminLayout({ colorBgContainer,  collapsed , setCo
                   height: 64,
               }}
           />
-          <Notification />
+          <Button className='mr-5' type='dashed' href='/home'>Trang chủ</Button>
       </Header>
   )
 }

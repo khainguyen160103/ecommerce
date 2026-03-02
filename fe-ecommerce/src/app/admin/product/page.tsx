@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react'
-import { Button, Flex, Modal, Space, Table, Tag, Popconfirm, Form, Input, InputNumber, Select, Upload, Pagination } from 'antd';
+import { Button, Flex, Modal, Space, Table, Tag, Popconfirm, Form, Input, InputNumber, Select, Upload, Pagination, Card, Row, Col } from 'antd';
 import { UploadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useProduct } from '@/hook/useProduct';
 import { useCategory } from '@/hook/useCategory';
@@ -20,6 +20,7 @@ export default function ProductPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>(undefined);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [form] = Form.useForm();
   const [detailForm] = Form.useForm();
 
@@ -27,10 +28,21 @@ export default function ProductPage() {
   const { categoriesData } = useCategory();
   
   // Lấy dữ liệu từ API
-  const products: DataType[] = productsData.data?.data || [];
+  const allProducts: DataType[] = productsData.data?.data || [];
   const pagination = productsData.data?.pagination || {pageSize : 10, total_item: 0, totalPages: 0}
   const {pageSize, total_item, totalPages} = pagination
-  const totalProducts = productsData.data?.length || 0;
+
+  // Semantic search - lọc theo tên và mô tả
+  const filteredProducts: DataType[] = allProducts.filter(product => {
+    const searchLower = searchKeyword.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(searchLower) ||
+      product.description.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const products = filteredProducts;
+  const totalProducts = filteredProducts.length;
   
   // Lấy chi tiết sản phẩm
   const productDetails = productDetailsData.data?.data || [];
@@ -143,14 +155,41 @@ export default function ProductPage() {
         <Spinner />
       ) : (
         <>
-          <Button 
-            className='w-fit'
-            type="primary" 
-            style={{ marginBottom: 16 }}
-            onClick={handleAddProduct}
-          >
-            Thêm Sản Phẩm
-          </Button>
+            <div style={{ marginBottom: 24 }}>
+              <Row gutter={[16, 16]}>
+                <Col xs={24} sm={12}>
+                  <Input.Search
+                    placeholder="Tìm kiếm sản phẩm theo tên hoặc mô tả..."
+                    value={searchKeyword}
+                    onChange={(e) => {
+                      setSearchKeyword(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    allowClear
+                    enterButton
+                  />
+                </Col>
+                <Col xs={24} sm={12} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button 
+                    type="primary" 
+                    onClick={handleAddProduct}
+                    style={{ width: '100%' }}
+                  >
+                    Thêm Sản Phẩm
+                  </Button>
+                </Col>
+              </Row>
+              {searchKeyword && (
+                <Tag
+                  closable
+                  onClose={() => setSearchKeyword('')}
+                  color="blue"
+                  style={{ marginTop: 12 }}
+                >
+                  Kết quả tìm kiếm: {totalProducts} sản phẩm
+                </Tag>
+              )}
+            </div>
           
           <Table<DataType> 
             dataSource={products} 

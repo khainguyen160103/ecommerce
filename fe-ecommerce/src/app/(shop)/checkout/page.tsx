@@ -325,40 +325,58 @@ export default function CheckoutPage() {
                   Không tìm thấy phương thức vận chuyển phù hợp
                 </Text>
               ) : (
-                <Radio.Group
-                  value={selectedRateId}
-                  onChange={(e) => setSelectedRateId(e.target.value)}
-                  className="w-full"
-                >
-                  <div className="flex flex-col gap-3">
-                    {shippingRates.map((rate: any) => (
-                      <Radio key={rate.id} value={rate.id} className="w-full">
-                        <div className="flex items-center justify-between w-full ml-1">
-                          <div>
-                            <Text strong>{rate.name}</Text>
-                            {rate.carrier && (
-                              <Text className="text-gray-400 text-xs ml-2">
-                                ({rate.carrier})
-                              </Text>
-                            )}
-                            <br />
-                            <Text className="text-gray-500 text-xs">
-                              {rate.estimated_days}
+                      <>
+                        {/* Warning khi dùng fallback rates */}
+                        {shippingData?.source === 'fallback' && (
+                          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                            <Text className="text-yellow-800 text-sm font-medium">
+                              ⚠️ Cảnh báo: {shippingData?.warning || 'Đang sử dụng phí vận chuyển tạm tính'}
                             </Text>
+                            {shippingData?.note && (
+                              <div className="mt-1">
+                                <Text className="text-yellow-700 text-xs">
+                                  {shippingData.note}
+                                </Text>
+                              </div>
+                            )}
                           </div>
-                          <Tag
-                            color={rate.fee === 0 ? "green" : "blue"}
-                            className="ml-4"
-                          >
-                            {rate.fee === 0
-                              ? "Miễn phí"
-                              : `${rate.fee.toLocaleString("vi-VN")}đ`}
-                          </Tag>
-                        </div>
-                      </Radio>
-                    ))}
-                  </div>
-                </Radio.Group>
+                        )}
+
+                        <Radio.Group
+                          value={selectedRateId}
+                          onChange={(e) => setSelectedRateId(e.target.value)}
+                          className="w-full"
+                        >
+                          <div className="flex flex-col gap-3">
+                            {shippingRates.map((rate: any) => (
+                              <Radio key={rate.id} value={rate.id} className="w-full">
+                                <div className="flex items-center justify-between w-full ml-1">
+                                  <div>
+                                    <Text strong>{rate.name}</Text>
+                                    {rate.carrier && (
+                                      <Text className="text-gray-400 text-xs ml-2">
+                                        ({rate.carrier})
+                                      </Text>
+                                    )}
+                                    <br />
+                                    <Text className="text-gray-500 text-xs">
+                                      {rate.estimated_days}
+                                    </Text>
+                                  </div>
+                                  <Tag
+                                    color={rate.fee === 0 ? "green" : "blue"}
+                                    className="ml-4"
+                                  >
+                                    {rate.fee === 0
+                                      ? "Miễn phí"
+                                      : `${rate.fee.toLocaleString("vi-VN")}đ`}
+                                  </Tag>
+                                </div>
+                              </Radio>
+                            ))}
+                          </div>
+                        </Radio.Group>
+                      </>
               )}
             </Card>
 
@@ -559,9 +577,13 @@ export default function CheckoutPage() {
           <Form.Item
             name="phone"
             label="Số điện thoại"
-            rules={[{ required: true, message: "Vui lòng nhập số điện thoại" }]}
+            rules={[
+              { required: true, message: "Vui lòng nhập số điện thoại" },
+              { max: 10, message: "Số điện thoại không được quá 10 số" },
+              { pattern: /^\d+$/, message: "Chỉ được nhập số" },
+            ]}
           >
-            <Input placeholder="Nhập số điện thoại" />
+            <Input placeholder="Nhập số điện thoại" maxLength={10} />
           </Form.Item>
 
           <div className="grid grid-cols-3 gap-3">

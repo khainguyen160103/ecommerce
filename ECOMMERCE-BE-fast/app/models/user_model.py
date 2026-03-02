@@ -33,7 +33,7 @@ class User(UserBase, table = True):
     status : bool = Field(default=True)
     create_at : datetime = Field(default_factory=datetime.now)
     update_at  : datetime = Field(default_factory=datetime.now)
-    role_id : int | None = Field(default=1, foreign_key="role.id")
+    role_id: int | None = Field(default=2, foreign_key="role.id")
     # relationship 
     role : Optional['Role'] = Relationship(back_populates='user')
     cart : Optional['Cart'] = Relationship(back_populates='user')

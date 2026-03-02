@@ -63,12 +63,12 @@ export default function Login() {
             <HeaderTop />
             <div className="flex items-center justify-center flex-col mt-[60px]">
                 <div className="bg-white shadow-lg flex items-center flex-col p-9 rounded-2xl min-w-[400px]">
-                    <h1 className="text-center mb-10 font-bold">
+                    <h1 className="text-center mb-10 font-bold text-2xl text-gray-900">
                         Đăng nhập vào hệ thống để mua hàng
                     </h1>
                     <form className="w-full" onSubmit={handleSubmit(onSubmit)}>
                         <div className="flex flex-col gap-y-2">
-                            <div>Email</div>
+                            <div className="text-sm font-medium text-gray-700">Email</div>
                             <Controller
                                 name="email"
                                 rules={{
@@ -92,7 +92,7 @@ export default function Login() {
                             />
                         </div>
                         <div className="flex flex-col gap-y-2 my-5">
-                            <div>Password</div>
+                            <div className="text-sm font-medium text-gray-700">Password</div>
                             <Controller
                                 name="password"
                                 control={control}

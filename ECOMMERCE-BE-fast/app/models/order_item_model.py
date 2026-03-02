@@ -6,9 +6,15 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .order_model import Order
     from .product_model import Product
+    from .product_detail_model import ProductDetail
+
+
 class OrderItemBase(SQLModel):
     order_id: UUID = Field(foreign_key="order.id")
     product_id: UUID = Field(foreign_key="product.id")
+    detail_id: UUID = Field(
+        foreign_key="product_detail.id"
+    )  # Chi tiết sản phẩm (màu/size)
     quantity: int
 
 class OrderItemIn(OrderItemBase):
@@ -28,3 +34,4 @@ class OrderItem(OrderItemBase, table=True):
     # Relationships
     order: "Order" = Relationship(back_populates="order_items")
     product: "Product" = Relationship(back_populates="order_items")
+    product_detail: "ProductDetail" = Relationship(back_populates="order_items")

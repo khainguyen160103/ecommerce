@@ -31,11 +31,6 @@ export default function ProductDetailPage() {
 
   const colorGroupBy = _.groupBy(details, "color")
   const sizeGroupBy = _.groupBy(details, "size")
-  const quantitySelected = colorSelected && sizeSelected ? _.filter(details, {
-    color: colorSelected,
-    size: sizeSelected
-  }).length : null
-
   // Get selected product detail ID
   const selectedProductDetail = colorSelected && sizeSelected 
     ? _.find(details, {
@@ -69,8 +64,8 @@ export default function ProductDetailPage() {
     }
 
     // Validate quantity
-    if (quantitySelected !== null && quantity > quantitySelected) {
-      message.error(`Chỉ còn ${quantitySelected} sản phẩm trong kho`)
+    if (selectedProductDetail && selectedProductDetail?.stock !== null && quantity > selectedProductDetail?.stock) {
+      message.error(`Chỉ còn ${selectedProductDetail.stock} sản phẩm trong kho`)
       return
     }
 
@@ -112,7 +107,7 @@ export default function ProductDetailPage() {
   }
 
   const handleQuantityPlus = () => {
-    if (quantitySelected !== null && quantity < quantitySelected) {
+    if (selectedProductDetail && quantity < selectedProductDetail.stock) {
       setQuantity(quantity + 1)
     } else {
       toast.error("Sản phẩm đã hết hàng")
@@ -138,7 +133,7 @@ export default function ProductDetailPage() {
       </div>
     )
   }
-
+  console.log("select item: ", selectedProductDetail)
   return (
     <>
       <div className="min-h-screen bg-gray-50 py-8">
@@ -208,8 +203,8 @@ export default function ProductDetailPage() {
                   <div>
                     <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
                     <div className="flex items-center gap-4">
-                      <Tag color={quantitySelected == null || quantitySelected > 0 ? "blue" : "orange"}>
-                        {quantitySelected == null || quantitySelected > 0 ? "Còn hàng" : "Hết Hàng"}
+                      <Tag color={details && details.length > 0 ? "blue" : "orange"}>
+                        {details && details.length > 0 ? "Còn hàng" : "Hết Hàng"}
                       </Tag>
                     </div>
                   </div>
@@ -280,17 +275,20 @@ export default function ProductDetailPage() {
                           onChange={(val) => setQuantity(val || 1)}
                           min={1}
                           max={100}
+                          readOnly
                           controls={false}
                           className="border-0"
                           style={{ width: '60px', textAlign: 'center' }}
                         />
+
                         <Button
                           type="text"
                           icon={<PlusOutlined />}
+
                           onClick={handleQuantityPlus}
                         />
                       </div>
-                      <span className="text-gray-600">Còn {quantitySelected} sản phẩm</span>
+                      <span className="text-gray-600">Còn {selectedProductDetail ? selectedProductDetail.stock : 0}  sản phẩm</span>
                     </div>
                   </div>
 

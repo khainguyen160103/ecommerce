@@ -193,6 +193,7 @@ class CheckoutService:
             order_item = OrderItem(
                 order_id=order.id,
                 product_id=cart_item.product_id,
+                detail_id=cart_item.detail_id,  # Lưu detail_id để biết chi tiết sản phẩm
                 quantity=cart_item.quantity,
             )
             self.order_repo.create_order_item(order_item, session)
@@ -218,8 +219,21 @@ class CheckoutService:
                 "total": total_with_shipping,
             }
         else:
-            # COD: xóa giỏ hàng ngay
+            # COD: xóa giỏ hàng ngay và giảm stock
             self._clear_cart(cart, cart_items, session)
+
+            # Giảm stock cho từng product detail
+            for cart_item in cart_items:
+                success = self.order_repo.reduce_product_stock(
+                    cart_item.detail_id, cart_item.quantity, session
+                )
+                if not success:
+                    # Rollback nếu không đủ stock
+                    session.rollback()
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Sản phẩm không đủ số lượng trong kho",
+                    )
 
             order.status = OrderStatus.CONFIRMED
             session.add(order)
@@ -232,7 +246,6 @@ class CheckoutService:
                 "order_id": str(order.id),
                 "payment_method": "cod",
                 "total": total_with_shipping,
-                "total": total,
             }
 
     def _clear_cart(self, cart, cart_items, session: Session) -> None:
@@ -295,6 +308,18 @@ class CheckoutService:
                 if payment:
                     payment.status = PaymentStatus.PAID
                     session.add(payment)
+
+            # Giảm stock cho các sản phẩm trong đơn hàng
+            order_items = self.order_repo.get_order_items(order.id, session)
+            for item in order_items:
+                success = self.order_repo.reduce_product_stock(
+                    item.detail_id, item.quantity, session
+                )
+                if not success:
+                    # Log warning nhưng không rollback vì đã thanh toán
+                    print(
+                        f"[WARNING] Không đủ stock cho product_detail {item.detail_id}"
+                    )
 
             # Xóa giỏ hàng sau khi thanh toán VNPay thành công
             cart = self.order_repo.get_cart_by_user_id(order.user_id, session)
@@ -372,6 +397,17 @@ class CheckoutService:
                     payment.status = PaymentStatus.PAID
                     session.add(payment)
 
+            # Giảm stock cho các sản phẩm trong đơn hàng
+            order_items = self.order_repo.get_order_items(order.id, session)
+            for item in order_items:
+                success = self.order_repo.reduce_product_stock(
+                    item.detail_id, item.quantity, session
+                )
+                if not success:
+                    print(
+                        f"[WARNING] Không đủ stock cho product_detail {item.detail_id}"
+                    )
+
             # Xóa giỏ hàng sau khi IPN xác nhận thành công
             cart = self.order_repo.get_cart_by_user_id(order.user_id, session)
             if cart:
@@ -403,18 +439,50 @@ class CheckoutService:
         """
         from app.utils.goship import goship_client
         from app.core.settings import settings
+        import logging
+
+        logger = logging.getLogger(__name__)
 
         # Lấy địa chỉ người nhận
         addresses = self.address_repo.get_addresses_by_user_id(user.id, session)
         if not addresses:
-            # Trả về rates mẫu nếu chưa có địa chỉ
-            return self._fallback_rates()
+            logger.warning("User %s chưa có địa chỉ nào → dùng fallback rates", user.id)
+            return self._fallback_rates(reason="Chưa có địa chỉ giao hàng")
 
         addr = addresses[0]
+
+        # Validate địa chỉ có đủ thông tin
         if not addr.city_id or not addr.district_id:
-            return self._fallback_rates()
+            logger.warning(
+                "Địa chỉ %s thiếu city_id hoặc district_id (city=%s, district=%s) → fallback",
+                addr.id,
+                addr.city_id,
+                addr.district_id,
+            )
+            return self._fallback_rates(
+                reason="Địa chỉ giao hàng chưa có thông tin tỉnh/quận đầy đủ"
+            )
+
+        # Validate cấu hình kho gửi hàng
+        if not settings.GOSHIP_FROM_CITY or not settings.GOSHIP_FROM_DISTRICT:
+            logger.error(
+                "Thiếu cấu hình GOSHIP_FROM_CITY=%s hoặc GOSHIP_FROM_DISTRICT=%s → fallback",
+                settings.GOSHIP_FROM_CITY,
+                settings.GOSHIP_FROM_DISTRICT,
+            )
+            return self._fallback_rates(
+                reason="Hệ thống chưa cấu hình địa chỉ kho gửi hàng"
+            )
 
         try:
+            logger.info(
+                "Gọi GoShip rates: from_city=%s, from_district=%s, to_city=%s, to_district=%s",
+                settings.GOSHIP_FROM_CITY,
+                settings.GOSHIP_FROM_DISTRICT,
+                addr.city_id,
+                addr.district_id,
+            )
+
             rates = goship_client.get_rates(
                 from_city=settings.GOSHIP_FROM_CITY,
                 from_district=settings.GOSHIP_FROM_DISTRICT,
@@ -438,32 +506,40 @@ class CheckoutService:
                 })
 
             if not formatted_rates:
-                return self._fallback_rates()
+                logger.warning("GoShip trả về danh sách rates rỗng → fallback")
+                return self._fallback_rates(
+                    reason="GoShip không có dịch vụ phù hợp cho tuyến này"
+                )
 
-            return {"rates": formatted_rates}
+            logger.info("GoShip rates thành công: %d rates", len(formatted_rates))
+            return {"rates": formatted_rates, "source": "goship"}
 
-        except Exception:
-            return self._fallback_rates()
+        except Exception as e:
+            logger.error("Lỗi gọi GoShip rates: %s → fallback", str(e), exc_info=True)
+            return self._fallback_rates(reason=f"Lỗi kết nối GoShip: {str(e)}")
 
-    def _fallback_rates(self) -> Dict[str, Any]:
+    def _fallback_rates(self, reason: str = "GoShip không khả dụng") -> Dict[str, Any]:
         """Rates mẫu khi không gọi được GoShip"""
         return {
             "rates": [
                 {
-                    "id": "standard",
+                    "id": "standard_fallback",
                     "name": "Giao hàng tiêu chuẩn",
-                    "carrier": "GoShip",
+                    "carrier": "Nội bộ",
                     "carrier_logo": "",
                     "estimated_days": "3-5 ngày",
                     "fee": 30000,
                 },
                 {
-                    "id": "express",
+                    "id": "express_fallback",
                     "name": "Giao hàng nhanh",
-                    "carrier": "GoShip Express",
+                    "carrier": "Nội bộ",
                     "carrier_logo": "",
                     "estimated_days": "1-2 ngày",
                     "fee": 50000,
                 },
-            ]
+            ],
+            "source": "fallback",
+            "warning": reason,
+            "note": "Đây là phí vận chuyển tạm tính. Để có phí chính xác từ GoShip, vui lòng đảm bảo địa chỉ giao hàng có đầy đủ thông tin tỉnh/quận/phường.",
         }

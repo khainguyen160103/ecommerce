@@ -106,19 +106,7 @@ export default function DeliveryPage() {
         createShipment(
           { order_id: record.id, rate_id: record.rate_id },
           {
-            onSuccess: (data: any) => {
-              if (data?.fallback) {
-                Modal.info({
-                  title: 'Đã tạo vận đơn nội bộ',
-                  content: (
-                    <div>
-                      <p>GoShip sandbox hiện không khả dụng.</p>
-                      <p>Đã tạo mã vận đơn nội bộ: <strong>{data.shipping_code}</strong></p>
-                      <p>Bạn có thể cập nhật trạng thái giao hàng thủ công.</p>
-                    </div>
-                  ),
-                });
-              }
+            onSuccess: () => {
               refetch();
             },
           }

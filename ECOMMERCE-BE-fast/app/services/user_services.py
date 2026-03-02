@@ -81,23 +81,26 @@ class UserService:
     
     def delete_user(self, user_id: UUID, session: Session) -> Dict[str, str]:
         """
-        [ADMIN] Xóa user (hard delete)
+        [ADMIN] Xóa user (soft delete: set status = False)
         Args:
             user_id: UUID của user
             session: Database session
         Returns:
             Dict chứa message
         """
-        # user = session.exec(select(User).where(User.id == user_id)).first()
-        user = self.repository.get_by_id(id=user_id, session=session)
+        # Lấy entity User từ DB (được SQLModel map), KHÔNG dùng UserOut/Pydantic
+        user = session.get(User, user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User không tồn tại"
             )
-        
-        
-        
+
+        user.status = False
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
         return {"message": "Xóa user thành công"}
     
     # ==================== USER FUNCTIONS ====================

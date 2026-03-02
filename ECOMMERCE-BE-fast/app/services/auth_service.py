@@ -72,7 +72,7 @@ class AuthService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Tài khoản đã bị vô hiệu hóa",
             )
-
+        
         payload = {
             "user_id": str(user.get("id")),
             "email": user.get("email"),

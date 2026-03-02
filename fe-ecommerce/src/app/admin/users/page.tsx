@@ -27,15 +27,16 @@ export default function UsersPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form] = Form.useForm()
   const tableData: DataType[] = usersData.data?.data || [];
+  const {deleteMutation} = useUsers()
+  const confirm = (id: string) => {
 
-  const confirm: PopconfirmProps['onConfirm'] = (e) => {
-    console.log(e);
-    toast.success("Xóa Thành Công")
-  };
+  console.log("editingId", id)
+  deleteMutation.mutate(id)
+
+}
 
   const cancel: PopconfirmProps['onCancel'] = (e) => {
     console.log(e);
-    toast.success("cancel")
   };
   const getPassword = (id: string) => { 
     return tableData.filter(user => user.id === id)['password']
@@ -110,7 +111,7 @@ export default function UsersPage() {
                 <Popconfirm
                   title="Xóa người dùng"
                   description="bạn có chắc chắn muốn xóa người dùng này"
-                  onConfirm={confirm}
+                  onConfirm={() => confirm(record.id)}
                   onCancel={cancel}
                   okText="Yes"
                   cancelText="No"

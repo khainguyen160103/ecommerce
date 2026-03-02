@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Button, Row, Col, Card, Checkbox, InputNumber, Empty, Divider, message, Spin } from 'antd'
+import { Button, Row, Col, Card, Checkbox, Empty, Divider, message, Spin } from 'antd'
 import { DeleteOutlined, ShoppingCartOutlined } from '@ant-design/icons'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -21,7 +21,6 @@ export default function CartPage() {
   const { data: cartData, isLoading: cartLoading } = useGetMyCart()
   const { mutate: updateItem, isPending: isUpdating } = useUpdateCartItem()
   const { mutate: deleteItem, isPending: isDeleting } = useDeleteCartItem()
-
   // Lấy thông tin sản phẩm từ product_id và detail_id
   const { items: cartItems, isLoading: isLoadingProducts } = useCartItems(cartData?.items)
 
@@ -47,10 +46,15 @@ export default function CartPage() {
     }
   }
 
-  // Handle quantity change
-  const handleQuantityChange = (id: string, quantity: number) => {
+  // Handle quantity change (số lượng không vượt quá stock trong kho)
+  const handleQuantityChange = (id: string, quantity: number, maxStock?: number) => {
     if (quantity < 1) return
-    updateItem({ itemId: id, quantity })
+    if (maxStock != null && quantity > maxStock) {
+      message.warning(`Số lượng không được vượt quá ${maxStock}`)
+      return
+    }
+    const cappedQuantity = maxStock != null ? Math.min(quantity, maxStock) : quantity
+    updateItem({ itemId: id, quantity: cappedQuantity })
   }
 
   // Handle delete item
@@ -171,7 +175,7 @@ export default function CartPage() {
                             )}
                           </div>
                           <div className="flex-1">
-                            <Link href={`/product/${item.productId}`}>
+                            <Link href={`/product/${item.product_id}`}>
                               <p className="text-sm line-clamp-2 text-gray-800 font-medium hover:text-blue-600 cursor-pointer">
                                 {item.product_name || 'Sản phẩm'}
                               </p>
@@ -196,28 +200,26 @@ export default function CartPage() {
                       <Col span={3}>
                         <div className="flex items-center border border-gray-300 rounded">
                           <button
-                            className="px-2 py-1 text-gray-600 hover:bg-gray-100"
+                            className="px-2 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
                             disabled={isUpdating}
                           >
                             −
                           </button>
-                          <InputNumber
-                            min={1}
-                            value={item.quantity}
-                            onChange={(val) => handleQuantityChange(item.id, val || 1)}
-                            controls={false}
-                            className="border-0 text-center w-12"
-                            disabled={isUpdating}
-                          />
+                          <span className="inline-block w-12 text-center py-1 border-0 text-gray-800 font-medium">
+                            {item.quantity}
+                          </span>
                           <button
-                            className="px-2 py-1 text-gray-600 hover:bg-gray-100"
-                            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                            disabled={isUpdating}
+                            className="px-2 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => handleQuantityChange(item.id, item.quantity + 1, item.stock)}
+                            disabled={isUpdating || (item.stock != null && item.quantity >= item.stock)}
                           >
                             +
                           </button>
                         </div>
+                        {item.stock != null && (
+                          <p className="text-xs text-gray-500 mt-1">Còn {item.stock} trong kho</p>
+                        )}
                       </Col>
 
                       {/* Action */}

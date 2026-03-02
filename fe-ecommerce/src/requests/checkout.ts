@@ -30,6 +30,9 @@ export interface ShippingRate {
 
 export interface ShippingRatesResponse {
   rates: ShippingRate[];
+  source?: "goship" | "fallback";
+  warning?: string;
+  note?: string;
 }
 
 export interface OrderPreview {

@@ -4,6 +4,7 @@ Admin: CRUD users
 User: Xem và cập nhật profile cá nhân
 """
 from fastapi import APIRouter, Depends
+from sqlalchemy.sql.functions import user
 from sqlmodel import Session
 from pydantic import BaseModel
 from uuid import UUID
@@ -49,8 +50,8 @@ def get_all_users(
 def get_user_by_id(
     user_id: UUID,
     session: Session = Depends(get_session),
-    service: UserService = Depends()
-) -> UserOut:
+    service: UserService = Depends(),
+) -> Dict[str, Any]:
     """
     [ADMIN] Lấy thông tin chi tiết của một user
     """
@@ -83,3 +84,12 @@ def update_profile(
     Cập nhật thông tin profile của người dùng hiện tại
     """
     return service.update_user_profile(user_id=current_user.id, name=data.name)
+
+
+@userRouter.delete("/{user_id}", dependencies=[Depends(admin_required)])
+def delete_user(
+    user_id: UUID,
+    service: Annotated[UserService, Depends()],
+    session: Annotated[Session, Depends(get_session)],
+) -> Dict[str, Any]:
+    return service.delete_user(user_id=user_id, session=session)

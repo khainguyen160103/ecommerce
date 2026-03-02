@@ -87,48 +87,56 @@ export default function Home() {
           {/* Products Grid */}
           {isLoading ? <Spinner /> : 
 
-          (displayProducts.length > 0 ? (
+            (
             <>
-              <Row gutter={[16, 24]}>
-                {displayProducts.map((product) => (
-                  <Col key={product.id} xs={24} sm={12} md={8} lg={6}> 
-                    <Link href={`/product/${product.id}`}>
-                      <Card
-                        onMouseEnter={() => handleHoverProduct(product.id)}
-                        hoverable
-                        className="h-full shadow-md hover:shadow-xl transition-shadow duration-300 rounded-xl overflow-hidden"
-                        cover={
-                          <div className="w-full h-56 bg-gray-100 flex items-center justify-center overflow-hidden relative group">
-                            <Image
-                              src={product.images[0].url}
-                              alt={product.name}
-                              fill
-                              className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                            />
-                          </div>
-                        }
-                      >
-                        <div className="flex flex-col h-full gap-3">
-                          <h3 className="font-sans text-base text-gray-800 line-clamp-2">
-                            {product.name}
-                          </h3>
-                          
-                          <div className="flex items-end justify-between pt-2">
-                            <span className="text-xl font-sans text-red-500">
-                              {parseFloat(product.price).toLocaleString('vi-VN')} ₫
-                            </span>
-                            <Truck strokeWidth={1.5} size={24} className="text-gray-600" />
-                          </div>
-                        </div>
-                      </Card>
-                    </Link>
-                  </Col>
-                ))}
-              </Row>
+                {displayProducts.length > 0 ? (
+                  <Row gutter={[16, 24]}>
+                    {displayProducts.map((product) => (
+                      <Col key={product.id} xs={24} sm={12} md={8} lg={6}>
+                        <Link href={`/product/${product.id}`}>
+                          <Card
+                            onMouseEnter={() => handleHoverProduct(product.id)}
+                            hoverable
+                            className="h-full shadow-md hover:shadow-xl transition-shadow duration-300 rounded-xl overflow-hidden"
+                            cover={
+                              <div className="w-full h-56 bg-gray-100 flex items-center justify-center overflow-hidden relative group">
+                                <Image
+                                  src={product.images[0].url}
+                                  alt={product.name}
+                                  fill
+                                  className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                />
+                              </div>
+                            }
+                          >
+                            <div className="flex flex-col h-full gap-3">
+                              <h3 className="font-sans text-base text-gray-800 line-clamp-2">
+                                {product.name}
+                              </h3>
+
+                              <div className="flex items-end justify-between pt-2">
+                                <span className="text-xl font-sans text-red-500">
+                                  {parseFloat(product.price).toLocaleString('vi-VN')} ₫
+                                </span>
+                                <Truck strokeWidth={1.5} size={24} className="text-gray-600" />
+                              </div>
+                            </div>
+                          </Card>
+                        </Link>
+                      </Col>
+                    ))}
+                  </Row>
+                ) : (
+                  <div className="text-center py-20">
+                    <div className="text-6xl mb-4">📭</div>
+                    <p className="text-gray-500 text-lg font-semibold">Không tìm thấy sản phẩm nào</p>
+                    <p className="text-gray-400 mt-2">Hãy thử tìm kiếm với từ khóa khác hoặc chọn danh mục khác</p>
+                  </div>
+                )}
 
               {/* Pagination */}
-              <div className="flex justify-center mt-12">
+                <div className="flex justify-center mt-16 pt-8">
                 <Pagination
                   current={currentPage}
                   pageSize={pageSize}
@@ -137,13 +145,7 @@ export default function Home() {
                 />
               </div>
             </>
-          ) : (
-            <div className="text-center py-20">
-              <div className="text-6xl mb-4">📭</div>
-              <p className="text-gray-500 text-lg font-semibold">Không tìm thấy sản phẩm nào</p>
-              <p className="text-gray-400 mt-2">Hãy thử tìm kiếm với từ khóa khác hoặc chọn danh mục khác</p>
-            </div>
-          ))}
+            )}
         </div>
       </div>
     </>

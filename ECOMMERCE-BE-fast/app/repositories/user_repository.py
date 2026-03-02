@@ -44,14 +44,18 @@ class UserRepository:
         return user
         
     def get_by_email(self,email : str , session : Session) -> UserOut:
-       stmt = select(User, Role.description.label("role")).join_from(User , Role, User.role_id ==Role.id).where(User.email == email)
-       result = session.exec(stmt).first()
-       if not result: 
-          return None
-       user_obj, role_description = result
-       user_data = User.model_validate(user_obj).model_dump()
-       user_data.pop('role_id')
-       user_data['role'] = role_description
-       return user_data
+        stmt = (
+            select(User, Role.description.label("role"))
+            .join_from(User, Role, User.role_id == Role.id)
+            .where(User.email == email)
+        )
+        result = session.exec(stmt).first()
+        if not result:
+            return None
+        user_obj, role_description = result
+        user_data = user_obj.model_dump()
+        user_data.pop("role_id", None)
+        user_data["role"] = role_description
+        return user_data
     
     
