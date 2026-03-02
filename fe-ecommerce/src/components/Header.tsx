@@ -10,6 +10,7 @@ import { Authorization } from '@/utils/auth.utils';
 import { SearchOutlined, CloseCircleFilled } from "@ant-design/icons";
 import { useSearch } from '@/hook/useSearch';
 import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/hook/useCart';
 const { Header } = Layout;
 const { Search } = Input
 
@@ -18,6 +19,10 @@ export default function HeaderTop() {
   const {checkAuth} = useAuth()
   const { inputValue, handleSearch, handleSearchImmediate, clearSearch } = useSearch()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const { useGetMyCart } = useCart()
+  const { data: cartData } = useGetMyCart()
+  const cartCount = cartData?.total_items || 0
 
 
   const userInfor = Authorization.getUserInfor()
@@ -61,12 +66,14 @@ export default function HeaderTop() {
 
   return (
     <>
-      <Header className="!bg-white !shadow-md !px-0 !h-auto sticky top-0 z-50">
+      <Header className="!px-0 !h-auto sticky top-0 z-50 !shadow-md" style={{ backgroundColor: '#52c41a' }}>
         <div className="max-w-[1440px] h-full mx-auto w-full px-4 sm:px-6 lg:px-8">
           {/* Top Bar - Logo, Search, User Actions */}
           <div className="flex items-center justify-between gap-4 py-3">
             <Link href='/' className="flex-none">
-              <Image alt='logo' width={90} height={45} src="/Planet Knit Logo.jpg" priority></Image>
+              <div className="w-[45px] h-[45px] rounded-full overflow-hidden">
+                <Image alt='logo' width={45} height={45} src="/Planet Knit Logo.jpg" priority className="object-cover w-full h-full" />
+              </div>
             </Link>
             
             {!isAuthPage && (
@@ -76,7 +83,7 @@ export default function HeaderTop() {
                   <Input
                     size="large"
                     placeholder="Tìm kiếm sản phẩm..."
-                    prefix={<SearchOutlined className="text-blue-600" />}
+                    prefix={<SearchOutlined className="text-green-600" />}
                     value={inputValue}
                     onChange={(e) => handleSearch(e.target.value)}
                     onPressEnter={(e) => handleSearchImmediate((e.target as HTMLInputElement).value)}
@@ -103,13 +110,13 @@ export default function HeaderTop() {
                           <Flex gap="small" align="center" className="cursor-pointer hover:opacity-80 transition">
                             <Avatar 
                               size="large" 
-                              style={{ backgroundColor: '#1890ff' }}
+                              style={{ backgroundColor: '#fff', color: '#52c41a', fontWeight: 'bold' }}
                             >
                               {userInfor?.username?.charAt(0).toUpperCase() || 'U'}
                             </Avatar>
                             <div className="hidden lg:block">
-                              <p className="text-sm font-semibold mb-0">{userInfor?.username}</p>
-                              <p className="text-xs text-gray-500 mb-0">{userInfor?.email}</p>
+                              <p className="text-sm font-semibold mb-0 text-white">{userInfor?.username}</p>
+                              <p className="text-xs text-green-100 mb-0">{userInfor?.email}</p>
                             </div>
                           </Flex>
                         </Dropdown>
@@ -117,22 +124,22 @@ export default function HeaderTop() {
 
                       {/* Cart Icon */}
                       <Link href="/cart">
-                        <Badge showZero>
-                          <ShoppingCart className="w-6 h-6 text-gray-700 hover:text-blue-600 transition cursor-pointer" />
+                        <Badge count={cartCount} overflowCount={99} size="small">
+                          <ShoppingCart className="w-6 h-6 text-white hover:text-green-100 transition cursor-pointer" />
                         </Badge>
                       </Link>
                     </>
                   ) : (
                     <>
                       <Link href="/login">
-                        <Button type="default" size="large">Đăng nhập</Button>
+                          <Button type="default" size="large" className="!border-white !text-white hover:!bg-white/10">Đăng nhập</Button>
                       </Link>
                       <Link href="/register">
-                        <Button type="primary" size="large">Đăng ký</Button>
+                          <Button type="primary" size="large" className="!bg-white !text-green-600 !border-white hover:!bg-green-50">Đăng ký</Button>
                       </Link>
                       <Link href="/cart">
                         
-                          <ShoppingCart className="w-6 h-6 text-gray-700" />
+                          <ShoppingCart className="w-6 h-6 text-white" />
                         
                       </Link>
                     </>
@@ -140,7 +147,7 @@ export default function HeaderTop() {
 
                   {/* Mobile Menu Button */}
                   <button 
-                    className="md:hidden"
+                    className="md:hidden text-white"
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   >
                     {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
