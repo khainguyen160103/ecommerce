@@ -2,6 +2,7 @@ from sqlmodel import Field, SQLModel, Relationship
 from uuid import UUID, uuid4
 from datetime import datetime
 from typing import TYPE_CHECKING
+from app.utils.timezone import vn_now
 
 if TYPE_CHECKING:
     from .cart_model import Cart
@@ -26,8 +27,8 @@ class CartItemOut(CartItemBase):
 class CartItem(CartItemBase, table=True):
     __tablename__ = 'cart_item'
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    create_at: datetime = Field(default_factory=datetime.now)
-    update_at: datetime = Field(default_factory=datetime.now)
+    create_at: datetime = Field(default_factory=vn_now)
+    update_at: datetime = Field(default_factory=vn_now)
     # Relationships
     cart: "Cart" = Relationship(back_populates="cart_items")
     product: "Product" = Relationship(back_populates="cart_items")

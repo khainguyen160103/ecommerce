@@ -4,7 +4,10 @@ Admin: CRUD danh mục
 User/Guest: Xem danh mục
 """
 from app.models.category_model import Category, CategoryIn, CategoryOut
+from app.models.product_model import Product
 from app.repositories.category_repository import CategoryRepository
+from app.core.constants import DEFAULT_CATEGORY_NAME
+from app.utils.timezone import vn_now
 from fastapi import HTTPException, status, Depends
 from sqlmodel import Session, select
 from uuid import UUID
@@ -86,6 +89,7 @@ class CategoryService:
         
         category.name = data.name
         category.description = data.description
+        category.update_at = vn_now()
         session.add(category)
         session.commit()
         session.refresh(category)
@@ -98,13 +102,12 @@ class CategoryService:
     def delete_category(self, category_id: UUID, session: Session) -> Dict[str, str]:
         """
         [ADMIN] Xóa danh mục
+        Nếu danh mục có sản phẩm, chuyển các sản phẩm sang danh mục 'Chưa phân loại'
         Args:
             category_id: UUID của danh mục
             session: Database session
         Returns:
             Dict chứa message
-        Raises:
-            HTTPException 400: Danh mục đang có sản phẩm
         """
         category = session.exec(
             select(Category).where(Category.id == category_id)
@@ -115,13 +118,39 @@ class CategoryService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Danh mục không tồn tại"
             )
-        
-        # Kiểm tra có sản phẩm không
-        if category.products:
+
+        # Không cho xóa danh mục mặc định
+        if category.name == DEFAULT_CATEGORY_NAME:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Không thể xóa danh mục đang có sản phẩm"
+                detail="Không thể xóa danh mục mặc định",
             )
+
+        # Nếu danh mục có sản phẩm → chuyển sang danh mục 'Chưa phân loại'
+        if category.products:
+            default_category = session.exec(
+                select(Category).where(Category.name == DEFAULT_CATEGORY_NAME)
+            ).first()
+
+            if not default_category:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Danh mục mặc định chưa được tạo. Vui lòng chạy seed lại.",
+                )
+
+            moved_count = len(category.products)
+            # Chuyển tất cả sản phẩm sang danh mục mặc định
+            for product in category.products:
+                product.category_id = default_category.id
+                session.add(product)
+
+            session.commit()
+            session.delete(category)
+            session.commit()
+
+            return {
+                "message": f"Xóa danh mục thành công. {moved_count} sản phẩm đã được chuyển sang danh mục '{DEFAULT_CATEGORY_NAME}'"
+            }
         
         session.delete(category)
         session.commit()

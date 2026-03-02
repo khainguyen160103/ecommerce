@@ -4,6 +4,7 @@ from fastapi import UploadFile
 from uuid import UUID, uuid4
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING
+from app.utils.timezone import vn_now
 
 if TYPE_CHECKING:
     from .category_model import Category
@@ -77,8 +78,8 @@ class ProductDetailOut(BaseModel):
 class Product(ProductBase, table=True):
     __tablename__ = "product"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    create_at: datetime = Field(default_factory=datetime.now)
-    update_at: datetime = Field(default_factory=datetime.now)
+    create_at: datetime = Field(default_factory=vn_now)
+    update_at: datetime = Field(default_factory=vn_now)
 
     # Relationships
     category: Optional["Category"] = Relationship(back_populates="products")

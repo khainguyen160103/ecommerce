@@ -431,6 +431,9 @@ export default function ProductPage() {
               <Form.Item
                 label="Màu"
                 name="color"
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập màu sản phẩm' },
+                  ]}
               >
                 <Input placeholder="Nhập màu sản phẩm (optional)" />
               </Form.Item>
@@ -438,6 +441,9 @@ export default function ProductPage() {
               <Form.Item
                 label="Kích Cỡ"
                 name="size"
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập kích cỡ' },
+                  ]}
               >
                 <Input placeholder="Nhập kích cỡ (optional)" />
               </Form.Item>

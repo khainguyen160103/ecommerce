@@ -1,6 +1,7 @@
 from sqlmodel import Field, SQLModel
 from uuid import UUID, uuid4
 from datetime import datetime
+from app.utils.timezone import vn_now
 
 class PaymentDetailBase(SQLModel):
     # order_id: UUID = Field(foreign_key="order.id")
@@ -19,5 +20,5 @@ class PaymentDetailOut(PaymentDetailBase):
 class PaymentDetail(PaymentDetailBase, table=True):
     __tablename__ = 'payment_detail'
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    create_at: datetime = Field(default_factory=datetime.now)
-    update_at: datetime = Field(default_factory=datetime.now)
+    create_at: datetime = Field(default_factory=vn_now)
+    update_at: datetime = Field(default_factory=vn_now)

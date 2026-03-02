@@ -2,6 +2,7 @@ from sqlmodel import Field, SQLModel, Relationship
 from uuid import UUID, uuid4
 from datetime import datetime
 from typing import TYPE_CHECKING
+from app.utils.timezone import vn_now
 
 if TYPE_CHECKING:
     from .order_model import Order
@@ -28,8 +29,8 @@ class OrderItemOut(OrderItemBase):
 class OrderItem(OrderItemBase, table=True):
     __tablename__ = 'order_item'
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    create_at: datetime = Field(default_factory=datetime.now)
-    update_at: datetime = Field(default_factory=datetime.now)
+    create_at: datetime = Field(default_factory=vn_now)
+    update_at: datetime = Field(default_factory=vn_now)
     
     # Relationships
     order: "Order" = Relationship(back_populates="order_items")
