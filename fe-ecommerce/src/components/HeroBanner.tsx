@@ -21,9 +21,9 @@ export default function HeroBanner() {
   return (
     <div className="max-w-7xl mx-auto px-4 pt-6 pb-2">
       {/* Main Banner Section */}
-      <div className="flex gap-4 mb-10">
+          <div className="flex gap-4 mb-6">
         {/* Carousel - Main Banner */}
-        <div className="relative w-full lg:w-2/3 rounded-2xl overflow-hidden shadow-lg group">
+              <div className="relative w-full lg:w-2/3 rounded-2xl overflow-hidden shadow-lg ring-1 ring-orange-100 group">
           <Carousel
             ref={carouselRef}
             autoplay
@@ -43,6 +43,8 @@ export default function HeroBanner() {
                     sizes="(max-width: 768px) 100vw, 66vw"
                     priority={idx === 0}
                   />
+                        {/* Warm gradient overlay */}
+                        <div className="absolute inset-0 bg-linear-to-t from-orange-900/20 via-transparent to-transparent" />
                 </div>
               </div>
             ))}
@@ -50,15 +52,15 @@ export default function HeroBanner() {
           {/* Custom Arrow Buttons */}
           <button
             onClick={() => carouselRef.current?.prev()}
-            className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 cursor-pointer"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-orange-50 rounded-full p-2 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-300 z-10 cursor-pointer hover:scale-110"
           >
-            <ChevronLeft size={22} className="text-gray-700" />
+                      <ChevronLeft size={22} className="text-orange-700" />
           </button>
           <button
             onClick={() => carouselRef.current?.next()}
-            className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-orange-50 rounded-full p-2 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-300 z-10 cursor-pointer hover:scale-110"
           >
-            <ChevronRight size={22} className="text-gray-700" />
+                      <ChevronRight size={22} className="text-orange-700" />
           </button>
         </div>
 
@@ -67,7 +69,7 @@ export default function HeroBanner() {
           {sideImages.map((img, idx) => (
             <div
               key={idx}
-              className="relative flex-1 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer group"
+                  className="relative flex-1 rounded-2xl overflow-hidden shadow-lg ring-1 ring-orange-100 hover:shadow-xl hover:ring-orange-200 transition-all duration-300 cursor-pointer group"
             >
               <Image
                 src={img.src}
@@ -76,7 +78,7 @@ export default function HeroBanner() {
                 className="object-cover group-hover:scale-105 transition-transform duration-500"
                 sizes="33vw"
               />
-              <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent" />
+                  <div className="absolute inset-0 bg-linear-to-t from-orange-900/30 to-transparent" />
             </div>
           ))}
         </div>

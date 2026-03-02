@@ -55,19 +55,31 @@ export default function Home() {
   // })
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      <div className="min-h-screen bg-linear-to-b from-amber-50 via-orange-50/30 to-rose-50/20">
         {/* Hero Banner */}
         {!isSearching && <HeroBanner />}
 
         {/* Category Filter */}
         {!isSearching && categories && categories.length > 0 && (
           <div className="max-w-7xl mx-auto px-4 pt-8 pb-2">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-5">
-              Khám phá các sở thích nổi bật
-            </h2>
+            <div className="flex items-center gap-3 mb-5">
+              <span className="text-2xl">✨</span>
+              <h2 className="text-xl sm:text-2xl font-bold bg-linear-to-r from-orange-600 to-rose-500 bg-clip-text text-transparent">
+                Khám phá các sở thích nổi bật
+              </h2>
+            </div>
             <div className="flex flex-wrap gap-3">
-              {categories.map((cat: any) => {
+              {categories.map((cat: any, idx: number) => {
                 const isActive = selectedCategory === cat.id
+                const colorSchemes = [
+                  { active: 'bg-orange-500 border-orange-500 shadow-orange-200', hover: 'hover:border-orange-400 hover:text-orange-600 hover:bg-orange-50' },
+                  { active: 'bg-rose-500 border-rose-500 shadow-rose-200', hover: 'hover:border-rose-400 hover:text-rose-600 hover:bg-rose-50' },
+                  { active: 'bg-amber-500 border-amber-500 shadow-amber-200', hover: 'hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50' },
+                  { active: 'bg-teal-500 border-teal-500 shadow-teal-200', hover: 'hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50' },
+                  { active: 'bg-violet-500 border-violet-500 shadow-violet-200', hover: 'hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50' },
+                  { active: 'bg-pink-500 border-pink-500 shadow-pink-200', hover: 'hover:border-pink-400 hover:text-pink-600 hover:bg-pink-50' },
+                ]
+                const scheme = colorSchemes[idx % colorSchemes.length]
                 return (
                   <button
                     key={cat.id}
@@ -79,9 +91,9 @@ export default function Home() {
                       }
                       setCurrentPage(1)
                     }}
-                    className={`px-5 py-2.5 rounded-full text-sm font-medium border transition-all duration-200 cursor-pointer ${isActive
-                        ? 'bg-green-600 text-white border-green-600 shadow-md shadow-green-200'
-                        : 'bg-white text-gray-700 border-gray-200 hover:border-green-500 hover:text-green-600 hover:shadow-sm'
+                    className={`px-5 py-2.5 rounded-full text-sm font-medium border-2 transition-all duration-300 cursor-pointer ${isActive
+                        ? `${scheme.active} text-white shadow-md scale-105`
+                        : `bg-white/80 text-gray-600 border-gray-200 ${scheme.hover}`
                       }`}
                   >
                     {cat.name}
@@ -96,6 +108,7 @@ export default function Home() {
           {/* Section Title for Products */}
           {!isSearching && (
             <div className="flex items-center gap-3 mb-8">
+              <span className="text-2xl">{selectedCategory ? '🏷️' : '🛍️'}</span>
               <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
                 {selectedCategory
                   ? `${categories?.find((c: any) => c.id === selectedCategory)?.name || 'Danh mục'}`
@@ -105,7 +118,7 @@ export default function Home() {
                 <Tag
                   closable
                   onClose={() => { setSelectedCategory(undefined); setCurrentPage(1); }}
-                  color="green"
+                  color="volcano"
                   className="cursor-pointer text-sm"
                 >
                   Xóa bộ lọc
@@ -144,9 +157,9 @@ export default function Home() {
                           <Card
                             onMouseEnter={() => handleHoverProduct(product.id)}
                             hoverable
-                            className="h-full shadow-md hover:shadow-xl transition-shadow duration-300 rounded-xl overflow-hidden"
+                            className="h-full shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden border-0 bg-white/90 backdrop-blur-sm"
                             cover={
-                              <div className="w-full h-56 bg-gray-100 flex items-center justify-center overflow-hidden relative group">
+                              <div className="w-full h-56 bg-amber-50/50 flex items-center justify-center overflow-hidden relative group">
                                 <Image
                                   src={product.images[0].url}
                                   alt={product.name}
@@ -158,15 +171,18 @@ export default function Home() {
                             }
                           >
                             <div className="flex flex-col h-full gap-3">
-                              <h3 className="font-sans text-base text-gray-800 line-clamp-2">
+                              <h3 className="font-sans text-base text-gray-800 line-clamp-2 font-medium">
                                 {product.name}
                               </h3>
 
                               <div className="flex items-end justify-between pt-2">
-                                <span className="text-xl font-sans text-red-500">
+                                <span className="text-xl font-bold bg-linear-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
                                   {parseFloat(product.price).toLocaleString('vi-VN')} ₫
                                 </span>
-                                <Truck strokeWidth={1.5} size={24} className="text-gray-600" />
+                                <div className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+                                  <Truck strokeWidth={2} size={14} />
+                                  <span>Freeship</span>
+                                </div>
                               </div>
                             </div>
                           </Card>
@@ -176,9 +192,17 @@ export default function Home() {
                   </Row>
                 ) : (
                   <div className="text-center py-20">
-                    <div className="text-6xl mb-4">📭</div>
-                    <p className="text-gray-500 text-lg font-semibold">Không tìm thấy sản phẩm nào</p>
+                      <div className="text-6xl mb-4">🧶</div>
+                      <p className="text-gray-600 text-lg font-semibold">Không tìm thấy sản phẩm nào</p>
                     <p className="text-gray-400 mt-2">Hãy thử tìm kiếm với từ khóa khác hoặc chọn danh mục khác</p>
+                      {selectedCategory && (
+                        <button
+                          onClick={() => { setSelectedCategory(undefined); setCurrentPage(1); }}
+                          className="mt-4 px-6 py-2 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors cursor-pointer"
+                        >
+                          Xem tất cả sản phẩm
+                        </button>
+                      )}
                   </div>
                 )}
 
