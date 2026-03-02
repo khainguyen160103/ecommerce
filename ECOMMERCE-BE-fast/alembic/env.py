@@ -15,6 +15,7 @@ from app.models.product_model import Product
 from app.models.role_model import Role
 from app.models.user_model import User 
 from app.models.product_image_model import ProductImage
+from app.models.review_model import Review
 from alembic import context
 
 # this is the Alembic Config object, which provides

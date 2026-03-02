@@ -66,7 +66,7 @@ export default function HeaderTop() {
           {/* Top Bar - Logo, Search, User Actions */}
           <div className="flex items-center justify-between gap-4 py-3">
             <Link href='/' className="flex-none">
-              <Image alt='logo' width={90} height={45} src="/logo.svg" priority></Image>
+              <Image alt='logo' width={90} height={45} src="/Planet Knit Logo.jpg" priority></Image>
             </Link>
             
             {!isAuthPage && (

@@ -1,7 +1,7 @@
 import  {Authorization} from '@/utils/auth.utils';
 import axios from "axios";
 export const axiosClient = axios.create({
-  baseURL: "http://backend:8000/api/",
+  baseURL: "http://localhost:8000/api/",
   timeout: 30000,
 });
 

@@ -12,6 +12,7 @@ import { Truck } from "lucide-react";
 import _ from "lodash";
 import { ProductService } from "@/requests/product";
 import { useSearch } from "@/hook/useSearch";
+import HeroBanner from "@/components/HeroBanner";
 export default function Home() {
   const { keyword, isSearching, searchQuery, clearSearch } = useSearch()
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,15 +35,7 @@ export default function Home() {
 
   const isLoading = isSearching ? searchQuery.isLoading : productsData.isLoading;
 
-  const categoryOptions = categories?.map((cat: any) => ({
-    label: cat.name,
-    value: cat.id
-  })) || [];
 
-  const handleCategoryChange = (value: string | undefined) => {
-    setSelectedCategory(value);
-    setCurrentPage(1);
-  };
 
   const handlePaginationChange = (page: number) => {
     setCurrentPage(page);
@@ -63,9 +56,63 @@ export default function Home() {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-        {/* Hero Banner removed */}
+        {/* Hero Banner */}
+        {!isSearching && <HeroBanner />}
+
+        {/* Category Filter */}
+        {!isSearching && categories && categories.length > 0 && (
+          <div className="max-w-7xl mx-auto px-4 pt-8 pb-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-5">
+              Khám phá các sở thích nổi bật
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {categories.map((cat: any) => {
+                const isActive = selectedCategory === cat.id
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      if (selectedCategory === cat.id) {
+                        setSelectedCategory(undefined)
+                      } else {
+                        setSelectedCategory(cat.id)
+                      }
+                      setCurrentPage(1)
+                    }}
+                    className={`px-5 py-2.5 rounded-full text-sm font-medium border transition-all duration-200 cursor-pointer ${isActive
+                        ? 'bg-green-600 text-white border-green-600 shadow-md shadow-green-200'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-green-500 hover:text-green-600 hover:shadow-sm'
+                      }`}
+                  >
+                    {cat.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="max-w-7xl mx-auto px-4 py-8 sm:py-12">
+          {/* Section Title for Products */}
+          {!isSearching && (
+            <div className="flex items-center gap-3 mb-8">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
+                {selectedCategory
+                  ? `${categories?.find((c: any) => c.id === selectedCategory)?.name || 'Danh mục'}`
+                  : 'Tất cả sản phẩm'}
+              </h2>
+              {selectedCategory && (
+                <Tag
+                  closable
+                  onClose={() => { setSelectedCategory(undefined); setCurrentPage(1); }}
+                  color="green"
+                  className="cursor-pointer text-sm"
+                >
+                  Xóa bộ lọc
+                </Tag>
+              )}
+            </div>
+          )}
           {/* Search Indicator */}
           {isSearching && (
             <div className="flex items-center gap-2 mb-6">

@@ -7,6 +7,7 @@ from .role_model import Role
 from .adress_model import Address
 from .cart_model import Cart
 from .order_model import Order
+from .review_model import Review
 
 
 VN_TIMEZONE = timezone(timedelta(hours=7))
@@ -39,3 +40,4 @@ class User(UserBase, table = True):
     cart : Optional['Cart'] = Relationship(back_populates='user')
     address: Optional["Address"] = Relationship(back_populates='user')
     order: Optional["Order"] = Relationship(back_populates='user')
+    reviews: list["Review"] = Relationship(back_populates="user")

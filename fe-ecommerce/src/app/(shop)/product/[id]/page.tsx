@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
 import { Button, Card, Row, Col, Spin, message, InputNumber, Space, Divider, Tag, Breadcrumb, Radio } from 'antd'
@@ -12,6 +12,8 @@ import _ from 'lodash'
 import { Product } from '@/models/product'
 import { ProductDetail } from '@/models/productDetail'
 import toast from 'react-hot-toast'
+import ProductReviews from '@/components/product/ProductReviews'
+import { Authorization } from '@/utils/auth.utils'
 
 export default function ProductDetailPage() {
   const params = useParams()
@@ -20,6 +22,14 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [colorSelected, setColorSelected] = useState(null)
   const [sizeSelected, setSizeSelected] = useState(null)
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    const userInfo = Authorization.getUserInfor()
+    if (userInfo?.id) {
+      setCurrentUserId(userInfo.id)
+    }
+  }, [])
 
   const { productIdData, productDetailsData } = useProduct(productId)
   const { useGetMyCart, useAddToCart } = useCart()
@@ -359,6 +369,11 @@ export default function ProductDetailPage() {
           </Card>
 
           {/* Additional Info */}
+
+          {/* Product Reviews */}
+          <div className="mt-6">
+            <ProductReviews productId={productId} currentUserId={currentUserId} />
+          </div>
 
         </div>
       </div>

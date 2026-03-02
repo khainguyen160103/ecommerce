@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from .product_image_model import ProductImage
     from .cart_item_model import CartItem
     from .order_item_model import OrderItem
+    from .review_model import Review
 
 
 class ProductBase(SQLModel):
@@ -87,5 +88,8 @@ class Product(ProductBase, table=True):
     cart_items: list["CartItem"] = Relationship(back_populates="product")
     order_items: list["OrderItem"] = Relationship(back_populates="product")
     images: list["ProductImage"] = Relationship(
+        back_populates="product", sa_relationship_kwargs={"passive_deletes": True}
+    )
+    reviews: list["Review"] = Relationship(
         back_populates="product", sa_relationship_kwargs={"passive_deletes": True}
     )

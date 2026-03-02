@@ -71,4 +71,12 @@ export const ENDPOINT = {
     TRACKING: (orderId) => `goship/shipments/${orderId}/tracking`,
     CANCEL_SHIPMENT: (orderId) => `goship/shipments/${orderId}/cancel`,
   },
+  REVIEW: {
+    GET_BY_PRODUCT: (productId) => `reviews/product/${productId}`,
+    CREATE: (productId) => `reviews/product/${productId}`,
+    GET_MY_REVIEW: (productId) => `reviews/my-review/${productId}`,
+    UPDATE: (reviewId) => `reviews/${reviewId}`,
+    DELETE: (reviewId) => `reviews/${reviewId}`,
+    ADMIN_DELETE: (reviewId) => `reviews/admin/${reviewId}`,
+  },
 };
