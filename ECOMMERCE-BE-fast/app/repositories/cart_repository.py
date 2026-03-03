@@ -9,6 +9,7 @@ from datetime import datetime
 from app.models.cart_model import Cart
 from app.models.cart_item_model import CartItem
 from app.models.product_model import Product
+from app.models.product_detail_model import ProductDetail
 
 
 class CartRepository:
@@ -115,4 +116,12 @@ class CartRepository:
         """Lấy sản phẩm theo ID"""
         return session.exec(
             select(Product).where(Product.id == product_id)
+        ).first()
+
+    def get_product_detail_by_id(
+        self, detail_id: UUID, session: Session
+    ) -> ProductDetail | None:
+        """Lấy product detail theo ID"""
+        return session.exec(
+            select(ProductDetail).where(ProductDetail.id == detail_id)
         ).first()

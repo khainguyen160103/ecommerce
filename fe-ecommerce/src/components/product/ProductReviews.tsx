@@ -212,7 +212,7 @@ export default function ProductReviews({
   productId: string
   currentUserId?: string
 }) {
-  const { reviewsData, myReviewData } = useReview(productId)
+  const { reviewsData, myReviewData, eligibilityData } = useReview(productId)
 
   const reviews: Review[] = reviewsData.data?.data || []
   const summary: ReviewSummary = reviewsData.data?.summary || {
@@ -221,6 +221,8 @@ export default function ProductReviews({
     distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
   }
   const myReview: Review | null = myReviewData.data?.data || null
+  const canReview: boolean = eligibilityData.data?.can_review ?? false
+  const hasDeliveredOrder: boolean = eligibilityData.data?.has_delivered_order ?? false
 
   return (
     <Card title="Đánh giá sản phẩm" className="shadow-sm">
@@ -232,13 +234,35 @@ export default function ProductReviews({
         </>
       )}
 
-      {/* Form viết đánh giá (chỉ hiện khi đã đăng nhập và chưa đánh giá) */}
-      {currentUserId && !myReview && (
+      {/* Form viết đánh giá (chỉ hiện khi đã đăng nhập, có đơn hàng giao thành công, và chưa đánh giá) */}
+      {currentUserId && canReview && (
         <>
           <ReviewForm productId={productId} />
           <Divider />
         </>
       )}
+
+      {/* Thông báo khi chưa đủ điều kiện đánh giá */}
+      {/* {currentUserId && !canReview && !myReview && (
+        <>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+            {!hasDeliveredOrder
+              ? ""
+              : "Bạn đã đánh giá sản phẩm này rồi."}
+          </div>
+          <Divider />
+        </>
+      )} */}
+
+      {/* Thông báo cho khách chưa đăng nhập */}
+      {/* {!currentUserId && (
+        <>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+            Vui lòng <a href="/login" className="font-semibold underline">đăng nhập</a> để đánh giá sản phẩm.
+          </div>
+          <Divider />
+        </>
+      )} */}
 
       {/* Danh sách đánh giá */}
       {reviews.length > 0 ? (

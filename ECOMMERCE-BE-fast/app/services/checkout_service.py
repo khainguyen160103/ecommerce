@@ -339,7 +339,10 @@ class CheckoutService:
                 "bank_code": vnp_bank_code,
             }
         else:
-            # Thanh toán thất bại - KHÔNG xóa giỏ hàng để user thử lại
+            # Thanh toán thất bại - hủy đơn hàng để user có thể đặt lại
+            order.status = OrderStatus.CANCELLED
+            session.add(order)
+
             if order.payment_id:
                 payment = session.get(PaymentDetail, order.payment_id)
                 if payment:
@@ -350,7 +353,7 @@ class CheckoutService:
 
             return {
                 "success": False,
-                "message": "Thanh toán thất bại",
+                "message": "Thanh toán thất bại. Đơn hàng đã được hủy, bạn có thể đặt lại.",
                 "order_id": str(order.id),
                 "response_code": vnp_response_code,
             }
@@ -415,6 +418,8 @@ class CheckoutService:
                 if cart_items:
                     self._clear_cart(cart, cart_items, session)
         else:
+            # Thanh toán thất bại qua IPN - hủy đơn hàng
+            order.status = OrderStatus.CANCELLED
             if order.payment_id:
                 payment = session.get(PaymentDetail, order.payment_id)
                 if payment:

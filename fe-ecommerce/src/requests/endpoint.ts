@@ -75,6 +75,7 @@ export const ENDPOINT = {
     GET_BY_PRODUCT: (productId) => `reviews/product/${productId}`,
     CREATE: (productId) => `reviews/product/${productId}`,
     GET_MY_REVIEW: (productId) => `reviews/my-review/${productId}`,
+    CHECK_ELIGIBILITY: (productId) => `reviews/check-eligibility/${productId}`,
     UPDATE: (reviewId) => `reviews/${reviewId}`,
     DELETE: (reviewId) => `reviews/${reviewId}`,
     ADMIN_DELETE: (reviewId) => `reviews/admin/${reviewId}`,

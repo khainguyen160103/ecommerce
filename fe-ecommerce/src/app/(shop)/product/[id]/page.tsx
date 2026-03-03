@@ -50,20 +50,42 @@ export default function ProductDetailPage() {
     : null
   console.log(selectedProductDetail)
   const handleAddToCart = () => { 
+    // Validate variant selection if product has variants
+    if (details.length > 0 && (!colorSelected || !sizeSelected)) {
+      message.warning('Vui lòng chọn màu sắc và kích thước')
+      return
+    }
+
+    // Validate quantity
+    if (quantity < 1) {
+      message.warning('Số lượng phải lớn hơn 0')
+      return
+    }
+
+    // Validate stock
+    if (selectedProductDetail && selectedProductDetail?.stock !== null && quantity > selectedProductDetail?.stock) {
+      message.error(`Chỉ còn ${selectedProductDetail.stock} sản phẩm trong kho`)
+      return
+    }
+
     // Add to cart
     if (details.length > 0 && selectedProductDetail) {
-      addToCart({
-        product_id: product?.id,
-        detail_id: selectedProductDetail.id,
-        quantity: quantity,
-        cart_id: cartData?.cart.id
-      })
+      addToCart(
+        {
+          product_id: product?.id,
+          detail_id: selectedProductDetail.id,
+          quantity: quantity,
+          cart_id: cartData?.cart.id
+        },
+        {
+          onSuccess: () => {
+            setQuantity(1)
+          },
+        }
+      )
     } else { 
-        message.error('Không tìm thấy thông tin sản phẩm')
-      }
-
-    // Reset quantity after success
-    setQuantity(1)
+      message.error('Không tìm thấy thông tin sản phẩm')
+    }
   }
   
   const handleBuyNow = () => {

@@ -20,6 +20,13 @@ export const useReview = (productId?: string) => {
     enabled: !!productId,
   });
 
+  // Kiểm tra điều kiện đánh giá (có đơn hàng giao thành công không)
+  const eligibilityData = useQuery({
+    queryKey: ["reviewEligibility", productId],
+    queryFn: () => ReviewService.checkEligibility(productId!),
+    enabled: !!productId,
+  });
+
   // Tạo đánh giá
   const createReview = useMutation({
     mutationFn: ({
@@ -33,6 +40,9 @@ export const useReview = (productId?: string) => {
       toast.success("Đánh giá thành công!");
       queryClient.invalidateQueries({ queryKey: ["reviews", productId] });
       queryClient.invalidateQueries({ queryKey: ["myReview", productId] });
+      queryClient.invalidateQueries({
+        queryKey: ["reviewEligibility", productId],
+      });
     },
     onError: (error: any) => {
       const message =
@@ -54,6 +64,9 @@ export const useReview = (productId?: string) => {
       toast.success("Cập nhật đánh giá thành công!");
       queryClient.invalidateQueries({ queryKey: ["reviews", productId] });
       queryClient.invalidateQueries({ queryKey: ["myReview", productId] });
+      queryClient.invalidateQueries({
+        queryKey: ["reviewEligibility", productId],
+      });
     },
     onError: () => {
       toast.error("Có lỗi xảy ra khi cập nhật đánh giá");
@@ -67,6 +80,9 @@ export const useReview = (productId?: string) => {
       toast.success("Xóa đánh giá thành công!");
       queryClient.invalidateQueries({ queryKey: ["reviews", productId] });
       queryClient.invalidateQueries({ queryKey: ["myReview", productId] });
+      queryClient.invalidateQueries({
+        queryKey: ["reviewEligibility", productId],
+      });
     },
     onError: () => {
       toast.error("Có lỗi xảy ra khi xóa đánh giá");
@@ -76,8 +92,9 @@ export const useReview = (productId?: string) => {
   return {
     reviewsData,
     myReviewData,
+    eligibilityData,
     createReview,
     updateReview,
     deleteReview,
   };
-};
+};;

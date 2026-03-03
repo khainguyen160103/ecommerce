@@ -50,9 +50,10 @@ export default function CheckoutPage() {
   const { data: preview, isLoading: previewLoading } = useOrderPreview(itemIds);
   const { mutateAsync: createCheckout, isPending: isCreating } = useCreateCheckout();
 
-  const { useGetMyAddresses, useCreateAddress } = useAddress();
+  const { useGetMyAddresses, useCreateAddress, useUpdateAddress } = useAddress();
   const { data: addressesData, isLoading: addressLoading } = useGetMyAddresses();
   const { mutateAsync: createAddress, isPending: isAddingAddress } = useCreateAddress();
+  const { mutateAsync: updateAddress, isPending: isUpdatingAddress } = useUpdateAddress();
 
   const { useGetCities, useGetDistricts, useGetWards } = useGoShip();
 
@@ -62,16 +63,27 @@ export default function CheckoutPage() {
   const [selectedRateId, setSelectedRateId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [showEditAddressModal, setShowEditAddressModal] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<any>(null);
   const [addressForm] = Form.useForm();
+  const [editAddressForm] = Form.useForm();
 
   // GoShip location state cho modal thêm địa chỉ
   const [modalCityId, setModalCityId] = useState<number | undefined>();
   const [modalDistrictId, setModalDistrictId] = useState<number | undefined>();
 
+  // GoShip location state cho modal sửa địa chỉ
+  const [editCityId, setEditCityId] = useState<number | undefined>();
+  const [editDistrictId, setEditDistrictId] = useState<number | undefined>();
+
   // GoShip location queries
   const { data: cities, isLoading: citiesLoading } = useGetCities();
   const { data: districts, isLoading: districtsLoading } = useGetDistricts(modalCityId);
   const { data: wards, isLoading: wardsLoading } = useGetWards(modalDistrictId);
+
+  // GoShip location queries cho modal sửa địa chỉ
+  const { data: editDistricts, isLoading: editDistrictsLoading } = useGetDistricts(editCityId);
+  const { data: editWards, isLoading: editWardsLoading } = useGetWards(editDistrictId);
 
   // ── Shipping rates (GoShip) ──
   const { data: shippingData, isLoading: shippingLoading } = useShippingRates(
@@ -156,6 +168,69 @@ export default function CheckoutPage() {
       setModalCityId(undefined);
       setModalDistrictId(undefined);
       setShowAddressModal(false);
+    } catch {
+      // validation error
+    }
+  };
+
+  const handleEditAddress = (addr: any) => {
+    setEditingAddress(addr);
+    setEditCityId(addr.city_id || undefined);
+    setEditDistrictId(addr.district_id || undefined);
+    editAddressForm.setFieldsValue({
+      fullName: addr.title,
+      phone: addr.phone_number,
+      city_id: addr.city_id,
+      district_id: addr.district_id,
+      ward_id: addr.ward_id,
+      street: addr.address?.split(',')[0]?.trim() || addr.address,
+    });
+    setShowEditAddressModal(true);
+  };
+
+  const handleEditCityChange = (cityId: number) => {
+    setEditCityId(cityId);
+    setEditDistrictId(undefined);
+    editAddressForm.setFieldsValue({ district_id: undefined, ward_id: undefined });
+  };
+
+  const handleEditDistrictChange = (districtId: number) => {
+    setEditDistrictId(districtId);
+    editAddressForm.setFieldsValue({ ward_id: undefined });
+  };
+
+  const handleUpdateAddress = async () => {
+    try {
+      const values = await editAddressForm.validateFields();
+
+      const cityName = cities?.find((c: any) => c.id === values.city_id)?.name || "";
+      const districtName = editDistricts?.find((d: any) => d.id === values.district_id)?.name || "";
+      const wardName = editWards?.find((w: any) => w.id === values.ward_id)?.name || "";
+
+      const fullAddress = [values.street, wardName, districtName, cityName]
+        .filter(Boolean)
+        .join(", ");
+
+      await updateAddress({
+        addressId: editingAddress.id,
+        data: {
+          title: values.fullName || "Địa chỉ",
+          address: fullAddress,
+          phone_number: values.phone,
+          city_id: values.city_id,
+          district_id: values.district_id,
+          ward_id: values.ward_id,
+          city_name: cityName,
+          district_name: districtName,
+          ward_name: wardName,
+        },
+      });
+
+      setShowEditAddressModal(false);
+      setEditingAddress(null);
+      editAddressForm.resetFields();
+      setEditCityId(undefined);
+      setEditDistrictId(undefined);
     } catch {
       // validation error
     }
@@ -283,17 +358,29 @@ export default function CheckoutPage() {
                   <div className="flex flex-col gap-3">
                     {addresses.map((addr: any) => (
                       <Radio key={addr.id} value={addr.id} className="w-full">
-                        <div className="ml-1">
-                          <Text strong>{addr.title || "Địa chỉ"}</Text>
-                          {addr.phone_number && (
-                            <Text className="ml-2 text-gray-500">
-                              | {addr.phone_number}
+                        <div className="ml-1 flex items-start justify-between">
+                          <div>
+                            <Text strong>{addr.title || "Địa chỉ"}</Text>
+                            {addr.phone_number && (
+                              <Text className="ml-2 text-gray-500">
+                                | {addr.phone_number}
+                              </Text>
+                            )}
+                            <br />
+                            <Text className="text-gray-600 text-sm">
+                              {addr.address}
                             </Text>
-                          )}
-                          <br />
-                          <Text className="text-gray-600 text-sm">
-                            {addr.address}
-                          </Text>
+                          </div>
+                          <Button
+                            type="link"
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditAddress(addr);
+                            }}
+                          >
+                            Sửa
+                          </Button>
                         </div>
                       </Radio>
                     ))}
@@ -637,6 +724,112 @@ export default function CheckoutPage() {
                 disabled={!modalDistrictId}
                 optionFilterProp="label"
                 options={(wards || []).map((w: any) => ({
+                  value: w.id,
+                  label: w.name,
+                }))}
+              />
+            </Form.Item>
+          </div>
+
+          <Form.Item
+            name="street"
+            label="Địa chỉ cụ thể"
+            rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
+          >
+            <Input placeholder="Số nhà, tên đường..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* ===== Edit Address Modal ===== */}
+      <Modal
+        title="Sửa địa chỉ"
+        open={showEditAddressModal}
+        onCancel={() => {
+          setShowEditAddressModal(false);
+          setEditingAddress(null);
+          editAddressForm.resetFields();
+          setEditCityId(undefined);
+          setEditDistrictId(undefined);
+        }}
+        onOk={handleUpdateAddress}
+        okText="Cập nhật"
+        cancelText="Hủy"
+        confirmLoading={isUpdatingAddress}
+        width={560}
+      >
+        <Form form={editAddressForm} layout="vertical" className="mt-4">
+          <Form.Item
+            name="fullName"
+            label="Họ và tên"
+            rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}
+          >
+            <Input placeholder="Nhập họ và tên người nhận" />
+          </Form.Item>
+
+          <Form.Item
+            name="phone"
+            label="Số điện thoại"
+            rules={[
+              { required: true, message: "Vui lòng nhập số điện thoại" },
+              { max: 10, message: "Số điện thoại không được quá 10 số" },
+              { min: 10, message: "Số điện thoại không được ít hơn 10 số" },
+              { pattern: /^\d+$/, message: "Chỉ được nhập số" },
+            ]}
+          >
+            <Input placeholder="Nhập số điện thoại" maxLength={10} />
+          </Form.Item>
+
+          <div className="grid grid-cols-3 gap-3">
+            <Form.Item
+              name="city_id"
+              label="Tỉnh/Thành phố"
+              rules={[{ required: true, message: "Chọn tỉnh/TP" }]}
+            >
+              <Select
+                showSearch
+                placeholder="Chọn tỉnh/TP"
+                loading={citiesLoading}
+                onChange={handleEditCityChange}
+                optionFilterProp="label"
+                options={(cities || []).map((c: any) => ({
+                  value: c.id,
+                  label: c.name,
+                }))}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="district_id"
+              label="Quận/Huyện"
+              rules={[{ required: true, message: "Chọn quận/huyện" }]}
+            >
+              <Select
+                showSearch
+                placeholder="Chọn quận/huyện"
+                loading={editDistrictsLoading}
+                disabled={!editCityId}
+                onChange={handleEditDistrictChange}
+                optionFilterProp="label"
+                options={(editDistricts || []).map((d: any) => ({
+                  value: d.id,
+                  label: d.name,
+                }))}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="ward_id"
+              label="Phường/Xã"
+              rules={[{ required: true, message: "Chọn phường/xã" }]}
+            >
+              <Select
+                showSearch
+                placeholder="Chọn phường/xã"
+                loading={editWardsLoading}
+                disabled={!editDistrictId}
+                optionFilterProp="label"
+                options={(editWards || []).map((w: any) => ({
                   value: w.id,
                   label: w.name,
                 }))}

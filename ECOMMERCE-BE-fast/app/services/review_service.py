@@ -62,6 +62,32 @@ class ReviewService:
         }
         return JSONResponse(jsonable_encoder(response), 200)
 
+    def check_review_eligibility(
+        self,
+        product_id: UUID,
+        user_id: UUID,
+        session: Session,
+    ) -> Dict[str, Any]:
+        """[USER] Kiểm tra user có đủ điều kiện đánh giá sản phẩm không"""
+        # Kiểm tra đã đánh giá chưa
+        existing = self.repository.get_user_review(
+            user_id=user_id, product_id=product_id, session=session
+        )
+        # Kiểm tra có đơn hàng giao thành công chưa
+        has_delivered = self.repository.has_delivered_order_for_product(
+            user_id=user_id, product_id=product_id, session=session
+        )
+        return JSONResponse(
+            jsonable_encoder(
+                {
+                    "can_review": has_delivered and not existing,
+                    "has_reviewed": existing is not None,
+                    "has_delivered_order": has_delivered,
+                }
+            ),
+            200,
+        )
+
     def create_review(
         self,
         product_id: UUID,
@@ -70,6 +96,15 @@ class ReviewService:
         session: Session,
     ) -> Dict[str, Any]:
         """[USER] Tạo đánh giá cho sản phẩm"""
+        # Kiểm tra user có đơn hàng giao thành công chứa sản phẩm này không
+        has_delivered = self.repository.has_delivered_order_for_product(
+            user_id=user_id, product_id=product_id, session=session
+        )
+        if not has_delivered:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn chỉ có thể đánh giá sản phẩm khi đơn hàng đã được giao thành công",
+            )
         # Kiểm tra user đã đánh giá sản phẩm này chưa
         existing = self.repository.get_user_review(
             user_id=user_id, product_id=product_id, session=session

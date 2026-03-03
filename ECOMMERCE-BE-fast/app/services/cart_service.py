@@ -80,17 +80,37 @@ class CartService:
         #     cart = Cart(user_id=current_user.id, total=0)
         #     cart = self.repository.create_cart(cart, session)
 
+        # Kiểm tra product detail và stock
+        product_detail = self.repository.get_product_detail_by_id(detail_id, session)
+        if not product_detail:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Chi tiết sản phẩm không tồn tại",
+            )
+
         # Kiểm tra sản phẩm đã có trong cart chưa
         existing_item = self.repository.get_cart_item_by_detail(
             cart.id, detail_id, session
         )
-        print("exist cart: ", existing_item)
         if existing_item:
+            # Kiểm tra tổng số lượng không vượt quá stock
+            new_quantity = existing_item.quantity + quantity
+            if new_quantity > product_detail.stock:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Không thể thêm. Trong kho chỉ còn {product_detail.stock} sản phẩm, giỏ hàng đã có {existing_item.quantity} sản phẩm.",
+                )
             # Cập nhật số lượng
-            existing_item.quantity += quantity
+            existing_item.quantity = new_quantity
             cart_item = self.repository.update_cart_item(existing_item, session)
             message = "Cập nhật số lượng sản phẩm trong giỏ hàng"
         else:
+            # Kiểm tra số lượng thêm mới không vượt quá stock
+            if quantity > product_detail.stock:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Không thể thêm. Trong kho chỉ còn {product_detail.stock} sản phẩm.",
+                )
             # Thêm mới
             cart_item = CartItem(
                 cart_id=cart.id,
@@ -129,6 +149,17 @@ class CartService:
             return self.remove_from_cart(
                 current_user=current_user, cart_item_id=cart_item_id, session=session
             )
+
+        # Kiểm tra stock trước khi cập nhật
+        if cart_item.detail_id:
+            product_detail = self.repository.get_product_detail_by_id(
+                cart_item.detail_id, session
+            )
+            if product_detail and quantity > product_detail.stock:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Trong kho chỉ còn {product_detail.stock} sản phẩm.",
+                )
 
         cart_item.quantity = quantity
         cart_item = self.repository.update_cart_item(cart_item, session)

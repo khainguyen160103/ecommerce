@@ -1,6 +1,9 @@
 from sqlmodel import Session, select, func
 from sqlalchemy.orm import selectinload
 from app.models.review_model import Review
+from app.models.order_model import Order
+from app.models.order_item_model import OrderItem
+from app.enum.role_enum import OrderStatus
 from uuid import UUID
 from typing import List, Dict, Any
 
@@ -57,6 +60,23 @@ class ReviewRepository:
             Review.user_id == user_id, Review.product_id == product_id
         )
         return session.exec(stmt).first()
+
+    def has_delivered_order_for_product(
+        self, user_id: UUID, product_id: UUID, session: Session
+    ) -> bool:
+        """Kiểm tra user đã có đơn hàng giao thành công chứa sản phẩm này chưa"""
+        stmt = (
+            select(func.count())
+            .select_from(Order)
+            .join(OrderItem, Order.id == OrderItem.order_id)
+            .where(
+                Order.user_id == user_id,
+                Order.status == OrderStatus.DELIVERED,
+                OrderItem.product_id == product_id,
+            )
+        )
+        count = session.exec(stmt).one()
+        return count > 0
 
     def create(self, review: Review, session: Session) -> Review:
         """Tạo đánh giá mới"""

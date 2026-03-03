@@ -45,6 +45,28 @@ def get_reviews_by_product(
 # ==================== USER ENDPOINTS ====================
 
 
+@reviewRouter.get(
+    "/check-eligibility/{product_id}",
+    summary="[USER] Kiểm tra điều kiện đánh giá sản phẩm",
+)
+def check_review_eligibility(
+    product_id: UUID,
+    session: Annotated[Session, Depends(get_session)],
+    service: Annotated[ReviewService, Depends()],
+    current_user: Annotated[UserOut, Depends(get_current_user)],
+) -> Dict[str, Any]:
+    """
+    [USER] Kiểm tra user có đủ điều kiện đánh giá sản phẩm không
+    - Phải có đơn hàng giao thành công chứa sản phẩm này
+    - Chưa đánh giá sản phẩm này trước đó
+    """
+    return service.check_review_eligibility(
+        product_id=product_id,
+        user_id=current_user.id,
+        session=session,
+    )
+
+
 @reviewRouter.post(
     "/product/{product_id}",
     summary="[USER] Tạo đánh giá cho sản phẩm",

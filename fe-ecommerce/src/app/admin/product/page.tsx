@@ -17,14 +17,17 @@ export default function ProductPage() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailListModalVisible, setIsDetailListModalVisible] = useState(false);
   const [isAddDetailModalVisible, setIsAddDetailModalVisible] = useState(false);
+  const [isEditDetailModalVisible, setIsEditDetailModalVisible] = useState(false);
+  const [editingDetail, setEditingDetail] = useState<ProductDetail | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>(undefined);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [form] = Form.useForm();
   const [detailForm] = Form.useForm();
+  const [editDetailForm] = Form.useForm();
 
-  const { productsData, deleteMutation, updateMutation, createMutation, addDetailMutation, deleteDetailMutation, productDetailsData } = useProduct(selectedProductId);
+  const { productsData, deleteMutation, updateMutation, createMutation, addDetailMutation, deleteDetailMutation, updateDetailMutation, productDetailsData } = useProduct(selectedProductId);
   const { categoriesData } = useCategory();
   
   // Lấy dữ liệu từ API
@@ -101,6 +104,38 @@ export default function ProductPage() {
   const handleDeleteDetail = ({ productId, detailId }: { productId: string; detailId: string }) => {
     console.log(productId, detailId)
     deleteDetailMutation.mutate({productId,detailId});
+  };
+
+  const handleEditDetail = (detail: ProductDetail) => {
+    setEditingDetail(detail);
+    editDetailForm.setFieldsValue({
+      color: detail.color,
+      size: detail.size,
+      stock: detail.stock,
+      weight: detail.weight,
+      length: detail.length,
+      width: detail.width,
+      height: detail.height,
+    });
+    setIsEditDetailModalVisible(true);
+  };
+
+  const handleEditDetailOk = async () => {
+    try {
+      const values = await editDetailForm.validateFields();
+      if (selectedProductId && editingDetail) {
+        await updateDetailMutation.mutateAsync({
+          productId: selectedProductId,
+          detailId: editingDetail.id,
+          data: values,
+        });
+        setIsEditDetailModalVisible(false);
+        setEditingDetail(null);
+        editDetailForm.resetFields();
+      }
+    } catch (error) {
+      console.log('Validate Failed:', error);
+    }
   };
 
   const handleModalOk = async () => {
@@ -387,27 +422,36 @@ export default function ProductPage() {
                 title="Hành Động"
                 key="action"
                 fixed="right"
-                width={100}
+                  width={180}
                 render={(_: any, record: ProductDetail) => (
-                  <Popconfirm
-                    title="Xóa chi tiết"
-                    description="Bạn có chắc chắn muốn xóa?"
-                    onConfirm={() => handleDeleteDetail({ 
-                      productId: record.product_id, 
-                      detailId: record.id
-                    })}
-                    okText="Có"
-                    cancelText="Không"
-                    okButtonProps={{ danger: true }}
-                  >
-                    <Button 
-                      danger 
-                      size="small" 
-                      icon={<DeleteOutlined />}
+                  <Space size="small">
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => handleEditDetail(record)}
                     >
-                      Xóa
+                      Sửa
                     </Button>
-                  </Popconfirm>
+                    <Popconfirm
+                      title="Xóa chi tiết"
+                      description="Bạn có chắc chắn muốn xóa?"
+                      onConfirm={() => handleDeleteDetail({
+                        productId: record.product_id,
+                        detailId: record.id
+                      })}
+                      okText="Có"
+                      cancelText="Không"
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Button
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                      >
+                        Xóa
+                      </Button>
+                    </Popconfirm>
+                  </Space>
                 )}
               />
             </Table>
@@ -503,6 +547,107 @@ export default function ProductPage() {
               </Form.Item>
             </Form>
           </Modal>
+
+            {/* Modal Sửa Chi Tiết Sản Phẩm */}
+            <Modal
+              title="Sửa Chi Tiết Sản Phẩm"
+              open={isEditDetailModalVisible}
+              onOk={handleEditDetailOk}
+              onCancel={() => {
+                setIsEditDetailModalVisible(false);
+                setEditingDetail(null);
+                editDetailForm.resetFields();
+              }}
+              okText="Cập Nhật"
+              cancelText="Hủy"
+              confirmLoading={updateDetailMutation.isPending}
+              width={600}
+            >
+              <Form
+                form={editDetailForm}
+                layout="vertical"
+                style={{ marginTop: 20 }}
+              >
+                <Form.Item
+                  label="Màu"
+                  name="color"
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập màu sản phẩm' },
+                  ]}
+                >
+                  <Input placeholder="Nhập màu sản phẩm" />
+                </Form.Item>
+
+                <Form.Item
+                  label="Kích Cỡ"
+                  name="size"
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập kích cỡ' },
+                  ]}
+                >
+                  <Input placeholder="Nhập kích cỡ" />
+                </Form.Item>
+
+                <Form.Item
+                  label="Số Lượng Tồn Kho"
+                  name="stock"
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập số lượng tồn kho' },
+                  ]}
+                >
+                  <InputNumber
+                    placeholder="Nhập số lượng"
+                    min={0}
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label="Cân Nặng (kg)"
+                  name="weight"
+                >
+                  <InputNumber
+                    placeholder="Nhập cân nặng"
+                    min={0}
+                    step={0.1}
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label="Chiều Dài (cm)"
+                  name="length"
+                >
+                  <InputNumber
+                    placeholder="Nhập chiều dài"
+                    min={0}
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label="Chiều Rộng (cm)"
+                  name="width"
+                >
+                  <InputNumber
+                    placeholder="Nhập chiều rộng"
+                    min={0}
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label="Chiều Cao (cm)"
+                  name="height"
+                >
+                  <InputNumber
+                    placeholder="Nhập chiều cao"
+                    min={0}
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+              </Form>
+            </Modal>
         </>
       )}
     </>

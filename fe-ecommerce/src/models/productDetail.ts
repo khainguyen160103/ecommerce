@@ -5,6 +5,10 @@ export type ProductDetail = {
   size: string;
   color: string;
   stock: number;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
   create_at: string;
   update_at: string;
 };

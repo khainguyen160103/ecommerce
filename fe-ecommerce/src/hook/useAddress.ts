@@ -47,15 +47,25 @@ export const useAddress = () => {
         data,
       }: {
         addressId: string;
-        data: { title?: string; address?: string; phone_number?: string };
+        data: {
+          title?: string;
+          address?: string;
+          phone_number?: string;
+          city_id?: number;
+          district_id?: number;
+          ward_id?: number;
+          city_name?: string;
+          district_name?: string;
+          ward_name?: string;
+        };
       }) => addressService.updateAddress(addressId, data),
       onSuccess: () => {
-        message.success('Cập nhật địa chỉ thành công!');
-        queryClient.invalidateQueries({ queryKey: ['myAddresses'] });
+        message.success("Cập nhật địa chỉ thành công!");
+        queryClient.invalidateQueries({ queryKey: ["myAddresses"] });
       },
       onError: (error: any) => {
         message.error(
-          error.response?.data?.detail || 'Không thể cập nhật địa chỉ'
+          error.response?.data?.detail || "Không thể cập nhật địa chỉ",
         );
       },
     });
