@@ -2,13 +2,14 @@ import { axiosClient } from './index';
 import { ENDPOINT } from './endpoint';
 
 export interface CheckoutRequest {
-  payment_method: 'vnpay' | 'cod';
+  payment_method: "vnpay" | "cod";
   address_id?: string;
   shipping_method?: string;
   note?: string;
   rate_id?: string;
   shipping_fee?: number;
   item_ids?: string[];
+  discount_code?: string;
 }
 
 export interface CheckoutResponse {

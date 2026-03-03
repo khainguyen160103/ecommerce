@@ -52,6 +52,15 @@ from .payment_detail_model import PaymentDetail, PaymentDetailBase, PaymentDetai
 # Review Models
 from .review_model import Review, ReviewBase, ReviewIn, ReviewUpdate, ReviewOut
 
+# Discount Models
+from .discount_model import (
+    Discount,
+    DiscountBase,
+    DiscountIn,
+    DiscountUpdate,
+    DiscountOut,
+)
+
 # Export all
 __all__ = [
     # Category
@@ -117,4 +126,10 @@ __all__ = [
     "ReviewIn",
     "ReviewUpdate",
     "ReviewOut",
+    # Discount
+    "Discount",
+    "DiscountBase",
+    "DiscountIn",
+    "DiscountUpdate",
+    "DiscountOut",
 ]

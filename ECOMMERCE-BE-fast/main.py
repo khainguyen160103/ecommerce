@@ -19,6 +19,7 @@ from app.routers.goship_router import goshipRouter
 from app.routers.chatbot_router import chatbotRouter
 from app.routers.report_router import reportRouter
 from app.routers.review_router import reviewRouter
+from app.routers.discount_router import discountRouter
 from app.core.cloudinary import cloud_config
 
 app = FastAPI(
@@ -61,6 +62,7 @@ app.include_router(goshipRouter, prefix=PREFIX)
 app.include_router(chatbotRouter, prefix=PREFIX)
 app.include_router(reportRouter, prefix=PREFIX)
 app.include_router(reviewRouter, prefix=PREFIX)
+app.include_router(discountRouter, prefix=PREFIX)
 
 
 @app.get("/")

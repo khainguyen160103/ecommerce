@@ -30,6 +30,7 @@ import {
 import { useCheckout } from "@/hook/useCheckout";
 import { useAddress } from "@/hook/useAddress";
 import { useGoShip } from "@/hook/useGoShip";
+import { useDiscount } from "@/hook/useDiscount";
 import toast from "react-hot-toast";
 
 const { Title, Text } = Typography;
@@ -57,11 +58,21 @@ export default function CheckoutPage() {
 
   const { useGetCities, useGetDistricts, useGetWards } = useGoShip();
 
+  // Discount
+  const { useApplyDiscount } = useDiscount();
+  const { mutateAsync: applyDiscountMutate, isPending: isApplyingDiscount } = useApplyDiscount();
+
   // ── State ──
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "vnpay">("cod");
   const [selectedRateId, setSelectedRateId] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    code: string;
+    discount_amount: number;
+    message: string;
+  } | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showEditAddressModal, setShowEditAddressModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState<any>(null);
@@ -121,7 +132,8 @@ export default function CheckoutPage() {
   const subtotal = preview?.subtotal || 0;
   const selectedShipping = shippingRates.find((r: any) => r.id === selectedRateId);
   const shippingFee = selectedShipping?.fee || 0;
-  const total = subtotal + shippingFee;
+  const discountAmount = appliedDiscount?.discount_amount || 0;
+  const total = Math.max(0, subtotal + shippingFee - discountAmount);
 
   // ── Handlers ──
 
@@ -256,6 +268,7 @@ export default function CheckoutPage() {
         rate_id: selectedRateId || undefined,
         shipping_fee: shippingFee,
         item_ids: itemIds,
+        discount_code: appliedDiscount?.code || undefined,
       });
 
       if (paymentMethod === "vnpay" && res.payment_url) {
@@ -515,6 +528,64 @@ export default function CheckoutPage() {
                 showCount
               />
             </Card>
+
+            {/* 5. Mã giảm giá */}
+            <Card title="Mã giảm giá">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nhập mã giảm giá..."
+                  value={discountCode}
+                  onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                  disabled={!!appliedDiscount}
+                  style={{ textTransform: 'uppercase' }}
+                />
+                {appliedDiscount ? (
+                  <Button
+                    danger
+                    onClick={() => {
+                      setAppliedDiscount(null);
+                      setDiscountCode("");
+                    }}
+                  >
+                    Hủy
+                  </Button>
+                ) : (
+                  <Button
+                    type="primary"
+                    onClick={async () => {
+                      if (!discountCode.trim()) {
+                        toast.error("Vui lòng nhập mã giảm giá");
+                        return;
+                      }
+                      try {
+                        const result = await applyDiscountMutate({
+                          code: discountCode.trim(),
+                          subtotal,
+                        });
+                        const data = result.data;
+                        setAppliedDiscount({
+                          code: data.code,
+                          discount_amount: data.discount_amount,
+                          message: data.message,
+                        });
+                        toast.success(data.message);
+                      } catch {
+                        // error handled in hook
+                      }
+                    }}
+                    loading={isApplyingDiscount}
+                    disabled={!discountCode.trim()}
+                  >
+                    Áp dụng
+                  </Button>
+                )}
+              </div>
+              {appliedDiscount && (
+                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+                  {appliedDiscount.message}
+                </div>
+              )}
+            </Card>
           </div>
 
           {/* ===== RIGHT COLUMN - Order Summary ===== */}
@@ -598,6 +669,16 @@ export default function CheckoutPage() {
                         : "Miễn phí"}
                     </Text>
                   </div>
+                  {appliedDiscount && (
+                    <div className="flex justify-between">
+                      <Text className="text-gray-500">
+                        Giảm giá <Tag color="blue" className="ml-1">{appliedDiscount.code}</Tag>
+                      </Text>
+                      <Text className="text-green-600 font-medium">
+                        -{discountAmount.toLocaleString("vi-VN")}đ
+                      </Text>
+                    </div>
+                  )}
                 </div>
 
                 <Divider className="my-3" />

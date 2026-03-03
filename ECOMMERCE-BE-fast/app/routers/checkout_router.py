@@ -23,6 +23,7 @@ class CheckoutRequest(BaseModel):
     rate_id: Optional[str] = None  # GoShip rate ID
     shipping_fee: int = 0  # Phí vận chuyển
     item_ids: Optional[List[str]] = None  # Danh sách cart item IDs đã chọn
+    discount_code: Optional[str] = None  # Mã giảm giá
 
 
 class ShippingRateRequest(BaseModel):
@@ -61,6 +62,7 @@ def create_checkout(
         rate_id=data.rate_id,
         shipping_fee=data.shipping_fee,
         item_ids=data.item_ids,
+        discount_code=data.discount_code,
     )
 
 

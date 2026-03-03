@@ -1,4 +1,4 @@
-import { BarChart3, PackageSearch, ShoppingBasket, Truck, Users, Warehouse } from "lucide-react";
+import { BarChart3, PackageSearch, ShoppingBasket, Truck, Users, Warehouse, TicketPercent } from "lucide-react";
 
 export const menuItems = [
   {
@@ -18,6 +18,12 @@ export const menuItems = [
     icon: <PackageSearch />,
     href: "/admin/product",
     label: "Quản lý sản phẩm",
+  },
+  {
+    key: "discounts",
+    icon: <TicketPercent />,
+    href: "/admin/discount",
+    label: "Quản lý mã giảm giá",
   },
   {
     key: "users",

@@ -9,6 +9,7 @@ from app.models.user_model import User
 from app.enum.role_enum import OrderStatus, PaymentStatus
 from app.repositories.order_repository import OrderRepository
 from app.repositories.address_repository import AddressRepository
+from app.repositories.discount_repository import DiscountRepository
 from app.utils.vnpay import VNPayHelper
 from app.core.settings import settings
 from fastapi import HTTPException, status, Depends
@@ -24,9 +25,11 @@ class CheckoutService:
         self,
         order_repo: Annotated[OrderRepository, Depends()],
         address_repo: Annotated[AddressRepository, Depends()],
+        discount_repo: Annotated[DiscountRepository, Depends()],
     ):
         self.order_repo = order_repo
         self.address_repo = address_repo
+        self.discount_repo = discount_repo
 
     def _get_vnpay_helper(self) -> VNPayHelper:
         """Tạo VNPay helper instance"""
@@ -122,6 +125,7 @@ class CheckoutService:
         rate_id: str | None = None,
         shipping_fee: int = 0,
         item_ids: Optional[List[str]] = None,
+        discount_code: str | None = None,
     ) -> Dict[str, Any]:
         """
         Tạo đơn hàng và xử lý thanh toán
@@ -165,7 +169,27 @@ class CheckoutService:
                 total += float(product.price) * item.quantity
 
         total = int(total)
-        total_with_shipping = total + shipping_fee
+
+        # Áp dụng mã giảm giá
+        discount_amount = 0
+        applied_discount_code = None
+        if discount_code:
+            from app.services.discount_service import DiscountService
+
+            discount_service = DiscountService(self.discount_repo)
+            try:
+                discount_result = discount_service.apply_discount(
+                    discount_code, total, session
+                )
+                discount_amount = int(discount_result["discount_amount"])
+                applied_discount_code = discount_result["code"]
+            except HTTPException:
+                # Nếu mã giảm giá không hợp lệ, bỏ qua và không áp dụng
+                pass
+
+        total_with_shipping = total + shipping_fee - discount_amount
+        if total_with_shipping < 0:
+            total_with_shipping = 0
 
         # Tạo PaymentDetail
         payment = PaymentDetail(
@@ -185,6 +209,8 @@ class CheckoutService:
             payment_id=payment.id,
             shipping_fee=shipping_fee,
             rate_id=rate_id,
+            discount_code=applied_discount_code,
+            discount_amount=discount_amount,
         )
         order = self.order_repo.create_order(order, session)
 
@@ -240,6 +266,13 @@ class CheckoutService:
             payment.status = PaymentStatus.PENDING
             session.add(payment)
             session.commit()
+
+            # Tăng số lần sử dụng mã giảm giá
+            if applied_discount_code:
+                from app.services.discount_service import DiscountService
+
+                discount_service = DiscountService(self.discount_repo)
+                discount_service.use_discount(applied_discount_code, session)
 
             return {
                 "message": "Đặt hàng thành công! Thanh toán khi nhận hàng.",
@@ -327,6 +360,13 @@ class CheckoutService:
                 cart_items = self.order_repo.get_cart_items(cart.id, session)
                 if cart_items:
                     self._clear_cart(cart, cart_items, session)
+
+            # Tăng số lần sử dụng mã giảm giá
+            if order.discount_code:
+                from app.services.discount_service import DiscountService
+
+                discount_service = DiscountService(self.discount_repo)
+                discount_service.use_discount(order.discount_code, session)
 
             session.commit()
 

@@ -33,6 +33,9 @@ class Order(OrderBase, table=True):
     tracking_number: str | None = Field(default=None)  # Mã vận đơn
     shipping_fee: int = Field(default=0)  # Phí vận chuyển
     rate_id: str | None = Field(default=None)  # GoShip rate ID đã chọn
+    # Discount fields
+    discount_code: str | None = Field(default=None)  # Mã giảm giá đã áp dụng
+    discount_amount: int = Field(default=0)  # Số tiền được giảm
     # Relationships
     user: Optional["User"] = Relationship(back_populates="order")
     order_items: list["OrderItem"] = Relationship(back_populates="order")

@@ -80,4 +80,12 @@ export const ENDPOINT = {
     DELETE: (reviewId) => `reviews/${reviewId}`,
     ADMIN_DELETE: (reviewId) => `reviews/admin/${reviewId}`,
   },
+  DISCOUNT: {
+    GET_ALL: "discounts",
+    GET_BY_ID: (id) => `discounts/${id}`,
+    CREATE: "discounts",
+    UPDATE: (id) => `discounts/${id}`,
+    DELETE: (id) => `discounts/${id}`,
+    APPLY: "discounts/apply",
+  },
 };
