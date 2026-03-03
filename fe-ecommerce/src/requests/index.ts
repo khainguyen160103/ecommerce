@@ -23,8 +23,14 @@ axiosClient.interceptors.response.use(
     return response
  },
  async (error) => { 
-  if(error.response?.status === 401) { 
-    return window.location.href = '/login'
+  if (error.response?.status === 401) {
+    // Tránh redirect loop nếu đang ở trang login/register
+    const currentPath = window.location.pathname;
+    if (currentPath !== "/login" && currentPath !== "/register") {
+      Authorization.saveToken("");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    }
   }
   return Promise.reject(error)
  }

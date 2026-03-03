@@ -132,7 +132,7 @@ export default function HeaderTop() {
                   ) : (
                     <>
                       <Link href="/login">
-                          <Button type="default" size="large" className="!border-white !text-white hover:!bg-white/10">Đăng nhập</Button>
+                          <Button type="default" size="large" className="!bg-transparent !border-white !text-white hover:!bg-white/10">Đăng nhập</Button>
                       </Link>
                       <Link href="/register">
                           <Button type="primary" size="large" className="!bg-white !text-green-600 !border-white hover:!bg-green-50">Đăng ký</Button>

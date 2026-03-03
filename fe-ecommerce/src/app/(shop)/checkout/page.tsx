@@ -580,6 +580,7 @@ export default function CheckoutPage() {
             rules={[
               { required: true, message: "Vui lòng nhập số điện thoại" },
               { max: 10, message: "Số điện thoại không được quá 10 số" },
+              { min: 10, message: "Số điện thoại không được ít hơn 10 số" },
               { pattern: /^\d+$/, message: "Chỉ được nhập số" },
             ]}
           >
