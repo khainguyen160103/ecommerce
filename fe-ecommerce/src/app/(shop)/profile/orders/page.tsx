@@ -11,6 +11,7 @@ import {
   Typography,
   Space,
   Breadcrumb,
+  Select,
 } from 'antd';
 import {
   ExclamationCircleOutlined,
@@ -38,19 +39,38 @@ export default function MyOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('all');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>('time_desc');
   const { useGetMyOrders, useCancelOrder } = useOrder();
-  const { data: ordersData, isLoading, isFetching } = useGetMyOrders(
-    (currentPage - 1) * PAGE_SIZE,
-    PAGE_SIZE
-  );
+  // Fetch all orders at once for proper client-side pagination with tab filtering
+  const { data: ordersData, isLoading, isFetching } = useGetMyOrders(0, 10000);
   const { mutate: cancelOrder } = useCancelOrder();
 
   const allOrders = Array.isArray(ordersData) ? ordersData : [];
-  const orders =
+  const filteredOrders =
     activeTab === 'all'
       ? allOrders
       : allOrders.filter((o: any) => o.status?.toLowerCase() === activeTab);
-  const total = orders.length;
+
+  // Sort orders
+  const sortedOrders = [...filteredOrders].sort((a: any, b: any) => {
+    switch (sortBy) {
+      case 'id_asc':
+        return a.id.localeCompare(b.id);
+      case 'id_desc':
+        return b.id.localeCompare(a.id);
+      case 'time_asc':
+        return new Date(a.create_at).getTime() - new Date(b.create_at).getTime();
+      case 'time_desc':
+      default:
+        return new Date(b.create_at).getTime() - new Date(a.create_at).getTime();
+    }
+  });
+  const total = sortedOrders.length;
+  // Slice for current page
+  const orders = sortedOrders.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   const handleCancelOrder = (orderId: string) => {
     Modal.confirm({
@@ -105,12 +125,28 @@ export default function MyOrdersPage() {
             <ShoppingOutlined className="mr-2" />
             Đơn hàng của tôi
           </Title>
-          <Link href="/profile">
-            <Button>
-              <UserOutlined />
-              Tài khoản
-            </Button>
-          </Link>
+          <Space>
+            <Select
+              style={{ width: 160 }}
+              value={sortBy}
+              onChange={(value) => {
+                setSortBy(value);
+                setCurrentPage(1);
+              }}
+              options={[
+                { label: 'Mới nhất', value: 'time_desc' },
+                { label: 'Cũ nhất', value: 'time_asc' },
+                { label: 'Mã đơn (A-Z)', value: 'id_asc' },
+                { label: 'Mã đơn (Z-A)', value: 'id_desc' },
+              ]}
+            />
+            <Link href="/profile">
+              <Button>
+                <UserOutlined />
+                Tài khoản
+              </Button>
+            </Link>
+          </Space>
         </div>
 
         {/* Tabs */}

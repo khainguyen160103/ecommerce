@@ -71,9 +71,24 @@ export const useAddress = () => {
     });
   };
 
+  const useDeleteAddress = () => {
+    return useMutation({
+      mutationFn: (addressId: string) =>
+        addressService.deleteAddress(addressId),
+      onSuccess: () => {
+        message.success("Xóa địa chỉ thành công!");
+        queryClient.invalidateQueries({ queryKey: ["myAddresses"] });
+      },
+      onError: (error: any) => {
+        message.error(error.response?.data?.detail || "Không thể xóa địa chỉ");
+      },
+    });
+  };
+
   return {
     useGetMyAddresses,
     useCreateAddress,
     useUpdateAddress,
+    useDeleteAddress,
   };
 };

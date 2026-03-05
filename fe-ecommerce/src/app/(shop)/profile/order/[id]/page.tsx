@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   Card,
@@ -15,7 +15,6 @@ import {
   Steps,
   Typography,
   Space,
-  Divider,
   Tag,
   Breadcrumb,
 } from 'antd';
@@ -30,6 +29,7 @@ import {
   CloseCircleOutlined,
   HomeOutlined,
   UserOutlined,
+  StarOutlined,
 } from '@ant-design/icons';
 import Link from 'next/link';
 import { useOrder } from '@/hook/useOrder';
@@ -144,8 +144,10 @@ export default function OrderDetailPage() {
           </Text>
         );
       },
-    },
+    }
   ];
+
+  const isDelivered = order?.status?.toLowerCase() === 'delivered';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -266,7 +268,7 @@ export default function OrderDetailPage() {
           <Table
             columns={columns}
             dataSource={order.items || []}
-            rowKey={(record: any, index) => record.id || `item-${index}`}
+            rowKey={(record: any) => record.id || record.product_detail_id || record.product_id || crypto.randomUUID()}
             pagination={false}
             scroll={{ x: 600 }}
             summary={() => (
@@ -303,6 +305,59 @@ export default function OrderDetailPage() {
             </Col>
           </Row>
         )}
+
+        {/* Review section for delivered orders */}
+        {isDelivered && (order.items || []).length > 0 && (
+          <Card
+            title={
+              <Space>
+                <StarOutlined style={{ color: '#faad14' }} />
+                <span>Đánh giá sản phẩm</span>
+              </Space>
+            }
+            style={{ marginBottom: 16 }}
+          >
+            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+              Đơn hàng đã giao thành công! Hãy đánh giá sản phẩm để giúp người mua khác.
+            </Text>
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              {(order.items || []).map((item: any, index: number) => {
+                const productId = item.product_id || item.product_detail?.product?.id;
+                const productName =
+                  item.product_name ||
+                  item.product_detail?.product?.name ||
+                  item.product_detail?.name ||
+                  'Sản phẩm';
+                return productId ? (
+                  <div
+                    key={productId + '-' + index}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '12px 16px',
+                      background: '#fafafa',
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text strong>{productName}</Text>
+                    <Link href={`/product/${productId}`}>
+                      <Button
+                        type="primary"
+                        icon={<StarOutlined />}
+                        style={{ background: '#faad14', borderColor: '#faad14' }}
+                      >
+                        Đánh giá ngay
+                      </Button>
+                    </Link>
+                  </div>
+                ) : null;
+              })}
+            </Space>
+          </Card>
+        )}
+
+
       </div>
     </div>
   );

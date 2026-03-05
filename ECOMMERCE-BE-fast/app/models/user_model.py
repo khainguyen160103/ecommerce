@@ -36,6 +36,6 @@ class User(UserBase, table = True):
     # relationship 
     role : Optional['Role'] = Relationship(back_populates='user')
     cart : Optional['Cart'] = Relationship(back_populates='user')
-    address: Optional["Address"] = Relationship(back_populates='user')
+    address: list["Address"] = Relationship(back_populates="user")
     order: Optional["Order"] = Relationship(back_populates='user')
     reviews: list["Review"] = Relationship(back_populates="user")

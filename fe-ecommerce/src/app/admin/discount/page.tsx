@@ -19,6 +19,13 @@ import Spinner from '@/components/Spinner'
 import { formatDate } from '@/utils/formatDate'
 import type { Discount } from '@/models/discount'
 import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
+
+const VN_TZ = 'Asia/Ho_Chi_Minh'
 
 const { Column } = Table
 
@@ -53,8 +60,8 @@ export default function DiscountPage() {
       max_discount: record.max_discount,
       usage_limit: record.usage_limit,
       is_active: record.is_active,
-      start_date: record.start_date ? dayjs(record.start_date) : null,
-      end_date: record.end_date ? dayjs(record.end_date) : null,
+      start_date: record.start_date ? dayjs(record.start_date).tz(VN_TZ) : null,
+      end_date: record.end_date ? dayjs(record.end_date).tz(VN_TZ) : null,
     })
     setIsModalVisible(true)
   }
@@ -63,17 +70,36 @@ export default function DiscountPage() {
     try {
       const values = await form.validateFields()
 
-      // Convert dates
-      const payload = {
-        ...values,
-        code: values.code?.toUpperCase(),
-        start_date: values.start_date ? values.start_date.toISOString() : null,
-        end_date: values.end_date ? values.end_date.toISOString() : null,
+      // Format dates as Vietnam timezone string (YYYY-MM-DDTHH:mm:ss)
+      // so the backend receives exact time the user selected
+      const formatDateVN = (d: any) => {
+        if (!d) return null
+        return dayjs(d).tz(VN_TZ).format('YYYY-MM-DDTHH:mm:ss')
       }
 
       if (editingId) {
+        // Only send fields that were actually changed
+        const payload: Record<string, any> = {}
+        const fields = ['code', 'description', 'discount_type', 'discount_value', 'min_order_value', 'max_discount', 'usage_limit', 'is_active', 'start_date', 'end_date']
+        for (const field of fields) {
+          if (values[field] !== undefined) {
+            if (field === 'code') {
+              payload[field] = values[field]?.toUpperCase()
+            } else if (field === 'start_date' || field === 'end_date') {
+              payload[field] = formatDateVN(values[field])
+            } else {
+              payload[field] = values[field]
+            }
+          }
+        }
         await updateMutation.mutateAsync({ id: editingId, data: payload })
       } else {
+        const payload = {
+          ...values,
+          code: values.code?.toUpperCase(),
+          start_date: formatDateVN(values.start_date),
+          end_date: formatDateVN(values.end_date),
+        }
         await createMutation.mutateAsync(payload)
       }
 

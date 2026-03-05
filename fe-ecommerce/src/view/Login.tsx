@@ -24,6 +24,7 @@ export default function Login() {
 
     const handleOAuthSuccess = useCallback(async (userInfor: any) => {
         if (userInfor?.status === 200) {
+            toast.dismiss() // Clear any previous error toasts
             if (userInfor.data.role === "ADMIN") {
                 router.push('/admin/order')
             } else {
@@ -37,14 +38,13 @@ export default function Login() {
         try { 
             const res = await login(data.email, data.password)
             if(res?.status === 200) { 
+                toast.dismiss() // Clear any previous error toasts
                 if(res.data.role === "ADMIN") { 
                     router.push('/admin/order')
                 }else { 
                     router.push('/')
                 }
             }
-            if(loading) return <Spinner />
-            if(error) return toast.error(error)
         }catch(error) { 
             console.log(error)
         }

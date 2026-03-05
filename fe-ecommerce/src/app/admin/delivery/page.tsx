@@ -43,6 +43,7 @@ export default function DeliveryPage() {
   const [pageSize, setPageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState('confirmed');
   const [trackingOrderId, setTrackingOrderId] = useState<string | undefined>(undefined);
+  const [sortBy, setSortBy] = useState<string>('time_desc');
 
   const { useGetAllOrders, useUpdateOrderStatus } = useOrder();
   const { useCreateShipment, useGetTracking, useCancelShipment } = useGoShip();
@@ -57,7 +58,19 @@ export default function DeliveryPage() {
   const { data: trackingData, isLoading: isTrackingLoading } = useGetTracking(trackingOrderId);
   const { mutate: cancelShipment, isPending: isCancelling } = useCancelShipment();
 
-  const orders = ordersData?.orders || [];
+  const orders = [...(ordersData?.orders || [])].sort((a: any, b: any) => {
+    switch (sortBy) {
+      case 'id_asc':
+        return a.id.localeCompare(b.id);
+      case 'id_desc':
+        return b.id.localeCompare(a.id);
+      case 'time_asc':
+        return new Date(a.create_at).getTime() - new Date(b.create_at).getTime();
+      case 'time_desc':
+      default:
+        return new Date(b.create_at).getTime() - new Date(a.create_at).getTime();
+    }
+  });
   const totalOrders = ordersData?.total || 0;
 
   const handleStatusUpdate = (orderId: string, newStatus: string, label: string) => {
@@ -267,8 +280,8 @@ export default function DeliveryPage() {
               </Button>
             )}
 
-            {/* Hủy vận đơn (chỉ khi có shipping_code và chưa giao xong) */}
-            {hasShipment && status !== 'delivered' && (
+            {/* Hủy vận đơn (chỉ khi có shipping_code, chưa giao xong, và chưa có tracking_number) */}
+            {hasShipment && status !== 'delivered' && !record.tracking_number && (
               <Button
                 size="small"
                 danger
@@ -321,6 +334,23 @@ export default function DeliveryPage() {
               setStatusFilter(val);
               setPageIndex(0);
             }}
+          />
+        </Col>
+        <Col xs={24} sm={8}>
+          <Select
+            style={{ width: '100%' }}
+            placeholder="Sắp xếp"
+            value={sortBy}
+            onChange={(value) => {
+              setSortBy(value);
+              setPageIndex(0);
+            }}
+            options={[
+              { label: 'Mới nhất', value: 'time_desc' },
+              { label: 'Cũ nhất', value: 'time_asc' },
+              { label: 'Mã đơn (A-Z)', value: 'id_asc' },
+              { label: 'Mã đơn (Z-A)', value: 'id_desc' },
+            ]}
           />
         </Col>
       </Row>

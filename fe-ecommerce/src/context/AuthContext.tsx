@@ -71,9 +71,13 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
             }
             return userInfor;
         } catch (error: any) {
+            // Clear any token saved from a failed login (e.g., disabled account)
+            Authorization.saveToken("", "")
+            localStorage.removeItem("user")
             setError(error)
             console.log(error)
-            toast.error("Tài khoản hoặc mật khẩu không chính xác")
+            const errorMsg = error?.response?.data?.detail || "Tài khoản hoặc mật khẩu không chính xác"
+            toast.error(errorMsg, { id: 'login-error' })
         } finally {
             setLoading(false)
         }
@@ -123,7 +127,7 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
             return await _handleOAuthResponse(res)
         } catch (error: any) {
             setError(error?.response?.data?.detail || "Đăng nhập Google thất bại")
-            toast.error(error?.response?.data?.detail || "Đăng nhập Google thất bại")
+            toast.error(error?.response?.data?.detail || "Đăng nhập Google thất bại", { id: 'login-error' })
         } finally {
             setLoading(false)
         }
@@ -137,7 +141,7 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
             return await _handleOAuthResponse(res)
         } catch (error: any) {
             setError(error?.response?.data?.detail || "Đăng nhập Facebook thất bại")
-            toast.error(error?.response?.data?.detail || "Đăng nhập Facebook thất bại")
+            toast.error(error?.response?.data?.detail || "Đăng nhập Facebook thất bại", { id: 'login-error' })
         } finally {
             setLoading(false)
         }

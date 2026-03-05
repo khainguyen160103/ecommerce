@@ -44,3 +44,11 @@ export const updateAddress = async (
   );
   return response.data;
 };
+
+// Xóa địa chỉ
+export const deleteAddress = async (addressId: string) => {
+  const response = await axiosClient.delete(
+    ENDPOINT.ADDRESS.DELETE(addressId)
+  );
+  return response.data;
+};

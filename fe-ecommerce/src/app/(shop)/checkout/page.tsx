@@ -17,6 +17,7 @@ import {
   Breadcrumb,
   Tag,
   Select,
+  Popconfirm,
 } from "antd";
 import {
   HomeOutlined,
@@ -26,6 +27,7 @@ import {
   CreditCardOutlined,
   CarOutlined,
   LoadingOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { useCheckout } from "@/hook/useCheckout";
 import { useAddress } from "@/hook/useAddress";
@@ -51,10 +53,11 @@ export default function CheckoutPage() {
   const { data: preview, isLoading: previewLoading } = useOrderPreview(itemIds);
   const { mutateAsync: createCheckout, isPending: isCreating } = useCreateCheckout();
 
-  const { useGetMyAddresses, useCreateAddress, useUpdateAddress } = useAddress();
+  const { useGetMyAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress } = useAddress();
   const { data: addressesData, isLoading: addressLoading } = useGetMyAddresses();
   const { mutateAsync: createAddress, isPending: isAddingAddress } = useCreateAddress();
   const { mutateAsync: updateAddress, isPending: isUpdatingAddress } = useUpdateAddress();
+  const { mutateAsync: deleteAddr } = useDeleteAddress();
 
   const { useGetCities, useGetDistricts, useGetWards } = useGoShip();
 
@@ -384,16 +387,43 @@ export default function CheckoutPage() {
                               {addr.address}
                             </Text>
                           </div>
-                          <Button
-                            type="link"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditAddress(addr);
-                            }}
-                          >
-                            Sửa
-                          </Button>
+                          <Space size="small">
+                            <Button
+                              type="link"
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditAddress(addr);
+                              }}
+                            >
+                              Sửa
+                            </Button>
+                            {addresses.length > 1 && (
+                              <Popconfirm
+                                title="Xóa địa chỉ này?"
+                                description="Bạn có chắc chắn muốn xóa địa chỉ này?"
+                                onConfirm={async (e) => {
+                                  e?.stopPropagation();
+                                  await deleteAddr(addr.id);
+                                  if (selectedAddressId === addr.id) {
+                                    const remaining = addresses.filter((a: any) => a.id !== addr.id);
+                                    setSelectedAddressId(remaining.length > 0 ? remaining[0].id : null);
+                                  }
+                                }}
+                                okText="Xóa"
+                                cancelText="Không"
+                                okButtonProps={{ danger: true }}
+                              >
+                                <Button
+                                  type="link"
+                                  size="small"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </Popconfirm>
+                            )}
+                          </Space>
                         </div>
                       </Radio>
                     ))}

@@ -354,6 +354,13 @@ def cancel_shipment(
             detail="Đơn hàng chưa có mã vận chuyển"
         )
 
+    # Không cho hủy nếu đã có mã vận đơn (tracking number)
+    if order.tracking_number:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Đơn hàng đã có mã vận đơn, không thể hủy vận chuyển",
+        )
+
     try:
         result = goship_client.cancel_shipment(order.shipping_code)
         order.status = "cancelled"

@@ -42,26 +42,6 @@ class AddressService:
         Returns:
             Dict chứa message và address info
         """
-        # Kiểm tra user đã có địa chỉ chưa (unique constraint trên user_id)
-        existing = self.repository.get_addresses_by_user_id(user.id, session)
-        if existing:
-            # Cập nhật địa chỉ hiện có thay vì tạo mới
-            address = existing[0]
-            address.title = data.title
-            address.address = data.address
-            address.phone_number = data.phone_number
-            address.city_id = data.city_id
-            address.district_id = data.district_id
-            address.ward_id = data.ward_id
-            address.city_name = data.city_name
-            address.district_name = data.district_name
-            address.ward_name = data.ward_name
-            address = self.repository.update_address(address, session)
-            return {
-                "message": "Cập nhật địa chỉ thành công",
-                "address": AddressOut.model_validate(address),
-            }
-
         address = Address(
             user_id=user.id,
             title=data.title,

@@ -33,6 +33,7 @@ export default function OrderPage() {
   const [pageSize, setPageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState('');
   const [searchText, setSearchText] = useState('');
+  const [sortBy, setSortBy] = useState<string>('time_desc');
 
   const { useGetAllOrders } = useOrder();
   const { data: ordersData, isLoading, isFetching, refetch } = useGetAllOrders(
@@ -53,8 +54,23 @@ export default function OrderPage() {
     );
   });
 
-  const orders = filteredOrders;
-  const totalOrders = filteredOrders.length;
+  // Sort orders
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+    switch (sortBy) {
+      case 'id_asc':
+        return a.id.localeCompare(b.id);
+      case 'id_desc':
+        return b.id.localeCompare(a.id);
+      case 'time_asc':
+        return new Date(a.create_at).getTime() - new Date(b.create_at).getTime();
+      case 'time_desc':
+      default:
+        return new Date(b.create_at).getTime() - new Date(a.create_at).getTime();
+    }
+  });
+
+  const orders = sortedOrders;
+  const totalOrders = sortedOrders.length;
 
   const columns = [
     {
@@ -131,7 +147,7 @@ export default function OrderPage() {
 
           {/* Filters */}
           <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-            <Col xs={24} sm={12}>
+          <Col xs={24} sm={8}>
             <Input.Search
               placeholder="Tìm mã đơn hàng, email, trạng thái..."
                 value={searchText}
@@ -143,7 +159,7 @@ export default function OrderPage() {
               enterButton
               />
             </Col>
-            <Col xs={24} sm={12}>
+          <Col xs={24} sm={8}>
               <Select
                 style={{ width: '100%' }}
                 placeholder="Lọc theo trạng thái"
@@ -155,6 +171,23 @@ export default function OrderPage() {
               }}
               />
             </Col>
+          <Col xs={24} sm={8}>
+            <Select
+              style={{ width: '100%' }}
+              placeholder="Sắp xếp"
+              value={sortBy}
+              onChange={(value) => {
+                setSortBy(value);
+                setPageIndex(0);
+              }}
+              options={[
+                { label: 'Mới nhất', value: 'time_desc' },
+                { label: 'Cũ nhất', value: 'time_asc' },
+                { label: 'Mã đơn (A-Z)', value: 'id_asc' },
+                { label: 'Mã đơn (Z-A)', value: 'id_desc' },
+              ]}
+            />
+          </Col>
           </Row>
 
         {/* Search Results Indicator */}

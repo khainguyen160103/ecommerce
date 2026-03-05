@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 # from app.models.user_model import User
 class AddressBase(SQLModel):
-    user_id: UUID = Field(foreign_key="user.id", unique=True)
+    user_id: UUID = Field(foreign_key="user.id")
     title: str | None = None
     address: str
     phone_number: str | None = None
