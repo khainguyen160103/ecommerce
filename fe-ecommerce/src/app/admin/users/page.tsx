@@ -108,17 +108,19 @@ export default function UsersPage() {
             render={(_: any, record: DataType) => (
               <Space size="middle">
                 <Button onClick={() => handleModalOpen(record)}>Xem chi tiết</Button>
-                <Popconfirm
-                  title="Xóa người dùng"
-                  description="bạn có chắc chắn muốn xóa người dùng này"
-                  onConfirm={() => confirm(record.id)}
-                  onCancel={cancel}
-                  okText="Yes"
-                  cancelText="No"
-                  okButtonProps={{ danger: true }}
-                >
-                  <Button danger>Xóa</Button>
-                </Popconfirm>
+                {record.role !== 'ADMIN' && (
+                  <Popconfirm
+                    title="Xóa người dùng"
+                    description="bạn có chắc chắn muốn xóa người dùng này"
+                    onConfirm={() => confirm(record.id)}
+                    onCancel={cancel}
+                    okText="Yes"
+                    cancelText="No"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button danger>Xóa</Button>
+                  </Popconfirm>
+                )}
               </Space>
             )}
           />
