@@ -21,11 +21,10 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Remove unique constraint on address.user_id."""
     # Drop the unique constraint on user_id to allow multiple addresses per user
-    op.drop_constraint('uq_address_user_id', 'address', type_='unique')
+    # MySQL auto-names the constraint after the column when no explicit name is given
+    op.drop_constraint("user_id", "address", type_="unique")
 
 
 def downgrade() -> None:
     """Re-add unique constraint on address.user_id."""
-    op.create_unique_constraint(
-        'uq_address_user_id', 'address', ['user_id']
-    )
+    op.create_unique_constraint("user_id", "address", ["user_id"])
