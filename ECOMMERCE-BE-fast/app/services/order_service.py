@@ -143,7 +143,9 @@ class OrderService:
             product = self.repository.get_product_by_id(item.product_id, session)
             items_detail.append(
                 {
-                    "product_id": item.product_id,
+                    "id": str(item.id),
+                    "product_id": str(item.product_id),
+                    "detail_id": str(item.detail_id) if item.detail_id else None,
                     "product_name": product.name if product else None,
                     "product_price": product.price if product else None,
                     "quantity": item.quantity,
@@ -151,11 +153,17 @@ class OrderService:
             )
 
         return {
-            "id": order.id,
+            "id": str(order.id),
+            "user_id": str(order.user_id),
             "total": order.total,
             "status": getattr(order, "status", OrderStatus.PENDING),
             "create_at": order.create_at,
+            "update_at": order.update_at,
+            "shipping_fee": order.shipping_fee,
+            "discount_code": order.discount_code,
+            "discount_amount": order.discount_amount,
             "items": items_detail,
+            "items_count": len(items_detail),
         }
 
     def cancel_order(

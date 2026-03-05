@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams } from 'next/navigation';
 import {
   Card,
@@ -15,7 +15,6 @@ import {
   Steps,
   Typography,
   Space,
-  Tag,
   Breadcrumb,
 } from 'antd';
 import {
@@ -50,7 +49,8 @@ export default function OrderDetailPage() {
   const params = useParams();
   const orderId = params?.id as string;
   const { useGetMyOrderById, useCancelOrder } = useOrder();
-  const { data: order, isLoading, error } = useGetMyOrderById(orderId);
+  const { data: orderData, isLoading, isError } = useGetMyOrderById(orderId);
+  const order = orderData as any;
   const { mutate: cancelOrder, isPending: isCancelling } = useCancelOrder();
 
   const handleCancel = () => {
@@ -79,7 +79,7 @@ export default function OrderDetailPage() {
     );
   }
 
-  if (error || !order) {
+  if (isError || (!isLoading && !order)) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-5xl mx-auto px-4 py-6">
@@ -268,7 +268,7 @@ export default function OrderDetailPage() {
           <Table
             columns={columns}
             dataSource={order.items || []}
-            rowKey={(record: any) => record.id || record.product_detail_id || record.product_id || crypto.randomUUID()}
+            rowKey={(record: any, index?: number) => record.id || record.product_detail_id || record.product_id || `item-${index}`}
             pagination={false}
             scroll={{ x: 600 }}
             summary={() => (
