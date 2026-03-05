@@ -21,7 +21,7 @@ class ReportRepository:
     ) -> Dict[str, Any]:
         """
         Báo cáo doanh thu theo khoảng thời gian
-        Chỉ tính các đơn hàng đã CONFIRMED trở lên
+        Chỉ tính các đơn hàng: chờ xác nhận, đã xác nhận, đã giao
         """
         query = select(
             func.count(Order.id).label("total_orders"),
@@ -31,11 +31,9 @@ class ReportRepository:
             and_(
                 Order.create_at >= start_date,
                 Order.create_at < datetime.combine(end_date, datetime.max.time()),
-                Order.status.in_([
-                    OrderStatus.CONFIRMED,
-                    OrderStatus.SHIPPING,
-                    OrderStatus.DELIVERED
-                ])
+                Order.status.in_(
+                    [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.DELIVERED]
+                ),
             )
         )
         
@@ -54,24 +52,27 @@ class ReportRepository:
         session: Session
     ) -> List[Dict[str, Any]]:
         """Báo cáo doanh thu theo từng ngày trong tháng"""
-        query = select(
-            func.date(Order.create_at).label("date"),
-            func.count(Order.id).label("total_orders"),
-            func.sum(Order.total).label("revenue"),
-        ).where(
-            and_(
-                func.year(Order.create_at) == year,
-                func.month(Order.create_at) == month,
-                Order.status.in_([
-                    OrderStatus.CONFIRMED,
-                    OrderStatus.SHIPPING,
-                    OrderStatus.DELIVERED
-                ])
+        query = (
+            select(
+                func.date(Order.create_at).label("date"),
+                func.count(Order.id).label("total_orders"),
+                func.sum(Order.total).label("revenue"),
             )
-        ).group_by(
-            func.date(Order.create_at)
-        ).order_by(
-            func.date(Order.create_at)
+            .where(
+                and_(
+                    func.year(Order.create_at) == year,
+                    func.month(Order.create_at) == month,
+                    Order.status.in_(
+                        [
+                            OrderStatus.PENDING,
+                            OrderStatus.CONFIRMED,
+                            OrderStatus.DELIVERED,
+                        ]
+                    ),
+                )
+            )
+            .group_by(func.date(Order.create_at))
+            .order_by(func.date(Order.create_at))
         )
         
         results = session.exec(query).all()
@@ -91,23 +92,26 @@ class ReportRepository:
         session: Session
     ) -> List[Dict[str, Any]]:
         """Báo cáo doanh thu theo từng tháng trong năm"""
-        query = select(
-            func.month(Order.create_at).label("month"),
-            func.count(Order.id).label("total_orders"),
-            func.sum(Order.total).label("revenue"),
-        ).where(
-            and_(
-                func.year(Order.create_at) == year,
-                Order.status.in_([
-                    OrderStatus.CONFIRMED,
-                    OrderStatus.SHIPPING,
-                    OrderStatus.DELIVERED
-                ])
+        query = (
+            select(
+                func.month(Order.create_at).label("month"),
+                func.count(Order.id).label("total_orders"),
+                func.sum(Order.total).label("revenue"),
             )
-        ).group_by(
-            func.month(Order.create_at)
-        ).order_by(
-            func.month(Order.create_at)
+            .where(
+                and_(
+                    func.year(Order.create_at) == year,
+                    Order.status.in_(
+                        [
+                            OrderStatus.PENDING,
+                            OrderStatus.CONFIRMED,
+                            OrderStatus.DELIVERED,
+                        ]
+                    ),
+                )
+            )
+            .group_by(func.month(Order.create_at))
+            .order_by(func.month(Order.create_at))
         )
         
         results = session.exec(query).all()
@@ -131,30 +135,32 @@ class ReportRepository:
         """Sản phẩm bán chạy nhất"""
         from app.models.product_model import Product
         
-        query = select(
-            OrderItem.product_id,
-            Product.name,
-            func.sum(OrderItem.quantity).label("total_quantity"),
-            func.count(OrderItem.id).label("total_orders"),
-        ).join(
-            Order, OrderItem.order_id == Order.id
-        ).join(
-            Product, OrderItem.product_id == Product.id
-        ).where(
-            and_(
-                Order.create_at >= start_date,
-                Order.create_at < datetime.combine(end_date, datetime.max.time()),
-                Order.status.in_([
-                    OrderStatus.CONFIRMED,
-                    OrderStatus.SHIPPING,
-                    OrderStatus.DELIVERED
-                ])
+        query = (
+            select(
+                OrderItem.product_id,
+                Product.name,
+                func.sum(OrderItem.quantity).label("total_quantity"),
+                func.count(OrderItem.id).label("total_orders"),
             )
-        ).group_by(
-            OrderItem.product_id, Product.name
-        ).order_by(
-            func.sum(OrderItem.quantity).desc()
-        ).limit(limit)
+            .join(Order, OrderItem.order_id == Order.id)
+            .join(Product, OrderItem.product_id == Product.id)
+            .where(
+                and_(
+                    Order.create_at >= start_date,
+                    Order.create_at < datetime.combine(end_date, datetime.max.time()),
+                    Order.status.in_(
+                        [
+                            OrderStatus.PENDING,
+                            OrderStatus.CONFIRMED,
+                            OrderStatus.DELIVERED,
+                        ]
+                    ),
+                )
+            )
+            .group_by(OrderItem.product_id, Product.name)
+            .order_by(func.sum(OrderItem.quantity).desc())
+            .limit(limit)
+        )
         
         results = session.exec(query).all()
         

@@ -2,10 +2,12 @@
 Report Service - Xử lý logic báo cáo doanh thu
 """
 from typing import Annotated, Dict, Any, List
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from fastapi import Depends
 from sqlmodel import Session
 from app.repositories.report_repository import ReportRepository
+
+VN_TZ = timezone(timedelta(hours=7))
 
 
 class ReportService:
@@ -20,7 +22,7 @@ class ReportService:
         period: str = "month"  # today, week, month, year
     ) -> Dict[str, Any]:
         """Tổng quan dashboard cho admin"""
-        today = date.today()
+        today = datetime.now(VN_TZ).date()
         
         if period == "today":
             start_date = today

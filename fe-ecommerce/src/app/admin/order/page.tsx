@@ -70,7 +70,7 @@ export default function OrderPage() {
   });
 
   const orders = sortedOrders;
-  const totalOrders = sortedOrders.length;
+  const totalOrders = ordersData?.total || 0;
 
   const columns = [
     {
@@ -217,7 +217,7 @@ export default function OrderPage() {
               rowKey={(record) => record.id}
               pagination={{
                 pageSize,
-                total: totalOrders,
+                total: searchText ? orders.length : totalOrders,
                 current: pageIndex + 1,
                 showSizeChanger: true,
                 showTotal: (total) => `Tổng ${total} đơn hàng`,
