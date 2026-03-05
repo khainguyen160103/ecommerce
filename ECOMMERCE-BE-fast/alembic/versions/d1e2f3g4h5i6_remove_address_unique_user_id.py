@@ -20,11 +20,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Remove unique constraint on address.user_id."""
-    # Drop the unique constraint on user_id to allow multiple addresses per user
-    # MySQL auto-names the constraint after the column when no explicit name is given
+    # MySQL requires an index on FK columns. The unique constraint is the only index
+    # on user_id, so we must create a regular index first before dropping the unique one.
+    op.create_index("ix_address_user_id", "address", ["user_id"])
     op.drop_constraint("user_id", "address", type_="unique")
 
 
 def downgrade() -> None:
     """Re-add unique constraint on address.user_id."""
     op.create_unique_constraint("user_id", "address", ["user_id"])
+    op.drop_index("ix_address_user_id", "address")
