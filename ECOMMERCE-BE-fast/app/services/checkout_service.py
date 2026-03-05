@@ -261,7 +261,7 @@ class CheckoutService:
                         detail="Sản phẩm không đủ số lượng trong kho",
                     )
 
-            order.status = OrderStatus.CONFIRMED
+            order.status = OrderStatus.PENDING
             session.add(order)
             payment.status = PaymentStatus.PENDING
             session.add(payment)
@@ -275,7 +275,7 @@ class CheckoutService:
                 discount_service.use_discount(applied_discount_code, session)
 
             return {
-                "message": "Đặt hàng thành công! Thanh toán khi nhận hàng.",
+                "message": "Đặt hàng thành công! Đơn hàng đang chờ xác nhận.",
                 "order_id": str(order.id),
                 "payment_method": "cod",
                 "total": total_with_shipping,
