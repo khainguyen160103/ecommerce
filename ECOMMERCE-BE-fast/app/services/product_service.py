@@ -171,7 +171,7 @@ class ProductService:
             )
 
     def update_product(
-        self, product_id: UUID, data: ProductIn, session: Session
+        self, product_id: UUID, data, session: Session
     ) -> Dict[str, Any]:
         """[ADMIN] Cập nhật sản phẩm"""
         product = self.repository.get_by_id(product_id=product_id, session=session)

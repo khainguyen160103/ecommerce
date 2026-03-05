@@ -1,7 +1,6 @@
 export type ProductDetail = {
   id: string;
   product_id: string;
-  sku: string;
   size: string;
   color: string;
   stock: number;
@@ -14,14 +13,12 @@ export type ProductDetail = {
 };
 
 export type CreateProductDetailInput = {
-  sku: string;
   size: string;
   color: string;
   stock: number;
 };
 
 export type UpdateProductDetailInput = {
-  sku?: string;
   size?: string;
   color?: string;
   stock?: number;

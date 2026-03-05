@@ -27,6 +27,13 @@ class ProductIn(ProductBase):
     file: Optional[list[UploadFile]]
 
 
+class ProductUpdateIn(SQLModel):
+    name: str | None = None
+    description: str | None = None
+    price: str | None = None
+    category_id: UUID | None = None
+
+
 # ===== RESPONSE MODELS (Pure Pydantic - không kế thừa SQLModel) =====
 
 

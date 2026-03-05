@@ -115,6 +115,8 @@ export default function DiscountPage() {
   }
 
   const discountType = Form.useWatch('discount_type', form)
+  const startDate = Form.useWatch('start_date', form)
+  const endDate = Form.useWatch('end_date', form)
 
   return (
     <>
@@ -334,15 +336,34 @@ export default function DiscountPage() {
                     showTime
                     format="DD/MM/YYYY HH:mm"
                     placeholder="Chọn ngày bắt đầu"
+                      disabledDate={(current) =>
+                        endDate ? current && current.isAfter(endDate, 'minute') : false
+                      }
                   />
                 </Form.Item>
 
-                <Form.Item label="Ngày kết thúc" name="end_date">
+                  <Form.Item
+                    label="Ngày kết thúc"
+                    name="end_date"
+                    rules={[
+                      {
+                        validator: (_, value) => {
+                          if (value && startDate && dayjs(value).isBefore(dayjs(startDate))) {
+                            return Promise.reject('Ngày kết thúc không được nhỏ hơn ngày bắt đầu')
+                          }
+                          return Promise.resolve()
+                        },
+                      },
+                    ]}
+                  >
                   <DatePicker
                     className="w-full"
                     showTime
                     format="DD/MM/YYYY HH:mm"
                     placeholder="Chọn ngày kết thúc"
+                      disabledDate={(current) =>
+                        startDate ? current && current.isBefore(startDate, 'minute') : false
+                      }
                   />
                 </Form.Item>
               </div>

@@ -6,7 +6,8 @@ User: Tạo đơn hàng, xem đơn hàng của mình
 from app.models.order_model import Order
 from app.models.order_item_model import OrderItem
 from app.models.user_model import User
-from app.enum.role_enum import OrderStatus
+from app.models.payment_detail_model import PaymentDetail
+from app.enum.role_enum import OrderStatus, PaymentStatus
 from app.repositories.order_repository import OrderRepository
 from fastapi import HTTPException, status, Depends
 from sqlmodel import Session
@@ -162,14 +163,7 @@ class OrderService:
     ) -> Dict[str, str]:
         """
         [USER] Hủy đơn hàng (chỉ khi status = PENDING)
-        Args:
-            user: User hiện tại
-            order_id: UUID của order
-            session: Database session
-        Returns:
-            Dict chứa message
-        Raises:
-            HTTPException 400: Không thể hủy đơn hàng
+        Nếu đơn đã thanh toán (VNPay), hoàn trả stock
         """
         order = self.repository.get_order_by_id(order_id, session)
 
@@ -184,6 +178,17 @@ class OrderService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Chỉ có thể hủy đơn hàng đang chờ xác nhận",
             )
+
+        # Nếu đã thanh toán (VNPay), hoàn trả stock
+        if order.payment_id:
+            payment = session.get(PaymentDetail, order.payment_id)
+            if payment and payment.status == PaymentStatus.PAID:
+                order_items = self.repository.get_order_items(order.id, session)
+                for item in order_items:
+                    if item.detail_id:
+                        self.repository.restore_product_stock(
+                            item.detail_id, item.quantity, session
+                        )
 
         self.repository.cancel_order(order, session)
 

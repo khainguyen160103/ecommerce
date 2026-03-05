@@ -145,7 +145,10 @@ export default function ProductPage() {
       if (editingId) {
         await updateMutation.mutateAsync({
           id: editingId,
-          data: values,
+          data: {
+            ...values,
+            price: values.price?.toString(),
+          },
         });
       } else {
         const formData = new FormData();

@@ -10,8 +10,13 @@ from typing import Annotated
 
 from app.core.database import get_session
 from app.deps.auth_dependency import admin_required
-from app.models.product_model import ProductIn, ProductOut, ProductDetailOut, Product
-from app.models.user_model import User
+from app.models.product_model import (
+    ProductIn,
+    ProductUpdateIn,
+    ProductOut,
+    ProductDetailOut,
+    Product,
+)
 from app.services.product_service import ProductService
 from app.models.product_detail_model import ProductDetailIn, ProductDetailOut
 from sqlmodel import select
@@ -93,13 +98,16 @@ def create_product(
     )
 
 
-@productRouter.put("/{product_id}", summary="[ADMIN] Cập nhật sản phẩm")
+@productRouter.put(
+    "/{product_id}",
+    summary="[ADMIN] Cập nhật sản phẩm",
+    dependencies=[Depends(admin_required)],
+)
 def update_product(
     product_id: UUID,
-    data: ProductIn,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(),
-    service: ProductService = Depends(),
+    data: ProductUpdateIn,
+    session: Annotated[Session, Depends(get_session)],
+    service: Annotated[ProductService, Depends()],
 ) -> Dict[str, Any]:
     """
     [ADMIN] Cập nhật thông tin sản phẩm

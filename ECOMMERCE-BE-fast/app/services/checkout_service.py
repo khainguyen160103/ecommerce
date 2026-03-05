@@ -331,8 +331,8 @@ class CheckoutService:
             }
 
         if is_valid and VNPayHelper.is_payment_success(vnp_response_code):
-            # Thanh toán thành công
-            order.status = OrderStatus.CONFIRMED
+            # Thanh toán thành công - giữ trạng thái PENDING để admin xác nhận
+            # order.status vẫn là PENDING (chờ xác nhận)
             session.add(order)
 
             # Cập nhật payment
@@ -372,29 +372,31 @@ class CheckoutService:
 
             return {
                 "success": True,
-                "message": "Thanh toán thành công!",
+                "message": "Thanh toán thành công! Đơn hàng đang chờ xác nhận.",
                 "order_id": str(order.id),
                 "amount": int(vnp_amount) // 100,
                 "transaction_no": vnp_transaction_no,
                 "bank_code": vnp_bank_code,
             }
         else:
-            # Thanh toán thất bại - hủy đơn hàng để user có thể đặt lại
-            order.status = OrderStatus.CANCELLED
-            session.add(order)
+            # Thanh toán thất bại - xóa đơn hàng và payment, không lưu lại
+            payment_id = order.payment_id
 
-            if order.payment_id:
-                payment = session.get(PaymentDetail, order.payment_id)
+            # Xóa order items trước
+            self.order_repo.delete_order_items(order.id, session)
+            # Xóa order
+            self.order_repo.delete_order(order, session)
+            # Xóa payment
+            if payment_id:
+                payment = session.get(PaymentDetail, payment_id)
                 if payment:
-                    payment.status = PaymentStatus.FAILED
-                    session.add(payment)
+                    session.delete(payment)
 
             session.commit()
 
             return {
                 "success": False,
-                "message": "Thanh toán thất bại. Đơn hàng đã được hủy, bạn có thể đặt lại.",
-                "order_id": str(order.id),
+                "message": "Thanh toán thất bại. Đơn hàng không được lưu, bạn có thể quay lại giỏ hàng để đặt lại.",
                 "response_code": vnp_response_code,
             }
 
@@ -433,7 +435,7 @@ class CheckoutService:
             return {"RspCode": "02", "Message": "Order already confirmed"}
 
         if VNPayHelper.is_payment_success(vnp_response_code):
-            order.status = OrderStatus.CONFIRMED
+            # Thanh toán thành công - giữ trạng thái PENDING để admin xác nhận
             if order.payment_id:
                 payment = session.get(PaymentDetail, order.payment_id)
                 if payment:
@@ -457,17 +459,19 @@ class CheckoutService:
                 cart_items = self.order_repo.get_cart_items(cart.id, session)
                 if cart_items:
                     self._clear_cart(cart, cart_items, session)
-        else:
-            # Thanh toán thất bại qua IPN - hủy đơn hàng
-            order.status = OrderStatus.CANCELLED
-            if order.payment_id:
-                payment = session.get(PaymentDetail, order.payment_id)
-                if payment:
-                    payment.status = PaymentStatus.FAILED
-                    session.add(payment)
 
-        session.add(order)
-        session.commit()
+            session.add(order)
+            session.commit()
+        else:
+            # Thanh toán thất bại qua IPN - xóa đơn hàng, không lưu lại
+            payment_id = order.payment_id
+            self.order_repo.delete_order_items(order.id, session)
+            self.order_repo.delete_order(order, session)
+            if payment_id:
+                payment = session.get(PaymentDetail, payment_id)
+                if payment:
+                    session.delete(payment)
+            session.commit()
 
         return {"RspCode": "00", "Message": "Confirm Success"}
 

@@ -130,7 +130,7 @@ function CheckoutResultContent() {
               }
               subTitle={
                 result.method === 'vnpay'
-                  ? 'Thanh toán VNPay đã được xác nhận. Cảm ơn bạn đã mua hàng!'
+                  ? 'Thanh toán VNPay thành công! Đơn hàng đang chờ admin xác nhận.'
                   : 'Đơn hàng của bạn đã được tạo. Bạn sẽ thanh toán khi nhận hàng.'
               }
             >
@@ -201,7 +201,7 @@ function CheckoutResultContent() {
                   {result.message || 'Thanh toán thất bại'}
                 </Title>
               }
-              subTitle="Đã có lỗi xảy ra trong quá trình thanh toán. Vui lòng thử lại."
+                subTitle="Thanh toán không thành công. Đơn hàng không được lưu, bạn có thể quay lại giỏ hàng để đặt lại."
             >
               {result.response_code && (
                 <>
@@ -209,12 +209,7 @@ function CheckoutResultContent() {
                   <Descriptions column={1} bordered size="small">
                     <Descriptions.Item label="Mã lỗi">
                       {result.response_code}
-                    </Descriptions.Item>
-                    {result.order_id && (
-                      <Descriptions.Item label="Mã đơn hàng">
-                        <Text copyable>{result.order_id}</Text>
                       </Descriptions.Item>
-                    )}
                   </Descriptions>
                 </>
               )}
@@ -222,12 +217,12 @@ function CheckoutResultContent() {
               <Divider />
 
               <Space className="w-full justify-center" size="middle">
-                <Link href="/profile/orders">
-                  <Button type="primary" icon={<FileTextOutlined />} size="large">
-                    Xem đơn hàng
+                  <Link href="/cart">
+                    <Button type="primary" icon={<ShoppingOutlined />} size="large">
+                      Quay lại giỏ hàng
                   </Button>
                 </Link>
-                <Link href="/">
+                  <Link href="/home">
                   <Button icon={<ShoppingOutlined />} size="large">
                     Về trang chủ
                   </Button>

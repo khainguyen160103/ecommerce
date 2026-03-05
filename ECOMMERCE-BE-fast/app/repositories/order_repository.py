@@ -173,3 +173,13 @@ class OrderRepository:
         if detail:
             detail.stock += quantity
             session.add(detail)
+
+    def delete_order_items(self, order_id: UUID, session: Session) -> None:
+        """Xóa tất cả items của đơn hàng"""
+        items = self.get_order_items(order_id, session)
+        for item in items:
+            session.delete(item)
+
+    def delete_order(self, order: Order, session: Session) -> None:
+        """Xóa đơn hàng"""
+        session.delete(order)
