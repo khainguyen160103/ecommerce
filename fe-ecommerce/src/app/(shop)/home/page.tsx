@@ -2,7 +2,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import Spinner from "@/components/Spinner";
-import HeaderTop from "@/components/Header";
 import { Card, Row, Col, Pagination, Tag } from "antd";
 import { useState } from "react";
 import { useProduct } from "@/hook/useProduct";
@@ -16,12 +15,12 @@ import HeroBanner from "@/components/HeroBanner";
 export default function Home() {
   const { keyword, isSearching, searchQuery, clearSearch } = useSearch()
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
+  const [pageSize] = useState(12);
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   
   const { productsData, queryClient } = useProduct();
   const { categoriesData } = useCategory();
-  const {data: products , pagination} = productsData.data || {}
+  const {data: products } = productsData.data || {}
   const {data: categories} = categoriesData.data || {}
   
   // Nếu đang search → dùng kết quả từ API search, ngược lại dùng danh sách thường
@@ -35,7 +34,10 @@ export default function Home() {
 
   const isLoading = isSearching ? searchQuery.isLoading : productsData.isLoading;
 
-
+  // Tính toán danh sách sản phẩm theo trang hiện tại (client-side pagination)
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedProducts = displayProducts.slice(startIndex, endIndex);
 
   const handlePaginationChange = (page: number) => {
     setCurrentPage(page);
@@ -151,7 +153,7 @@ export default function Home() {
             <>
                 {displayProducts.length > 0 ? (
                   <Row gutter={[16, 24]}>
-                    {displayProducts.map((product) => (
+                    {paginatedProducts.map((product) => (
                       <Col key={product.id} xs={24} sm={12} md={8} lg={6}>
                         <Link href={`/product/${product.id}`}>
                           <Card
