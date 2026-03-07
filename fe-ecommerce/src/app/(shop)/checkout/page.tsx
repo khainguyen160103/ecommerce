@@ -36,7 +36,7 @@ import { useDiscount } from "@/hook/useDiscount";
 import toast from "react-hot-toast";
 
 const { Title, Text } = Typography;
-const { TextArea } = Input;
+const { TextArea } = Input;   
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -61,8 +61,8 @@ export default function CheckoutPage() {
 
   const { useGetCities, useGetDistricts, useGetWards } = useGoShip();
 
-  // Discount
-  const { useApplyDiscount } = useDiscount();
+  // Discount - chỉ dùng apply cho user, không cần getAll (ADMIN)
+  const { useApplyDiscount } = useDiscount({ enableGetAll: false });
   const { mutateAsync: applyDiscountMutate, isPending: isApplyingDiscount } = useApplyDiscount();
 
   // ── State ──

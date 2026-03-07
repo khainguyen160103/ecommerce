@@ -188,6 +188,13 @@ class AuthService:
                     f"https://oauth2.googleapis.com/tokeninfo?id_token={data.credential}"
                 )
 
+            print(
+                f"[Google Auth Debug] tokeninfo status: {google_response.status_code}"
+            )
+            print(
+                f"[Google Auth Debug] tokeninfo response: {google_response.text[:500]}"
+            )
+
             if google_response.status_code != 200:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -195,6 +202,11 @@ class AuthService:
                 )
 
             google_data = google_response.json()
+
+            print(f"[Google Auth Debug] aud from token: {google_data.get('aud')}")
+            print(
+                f"[Google Auth Debug] GOOGLE_CLIENT_ID from settings: {settings.GOOGLE_CLIENT_ID}"
+            )
 
             # Kiểm tra audience (client_id) để đảm bảo token thuộc app của mình
             if google_data.get("aud") != settings.GOOGLE_CLIENT_ID:

@@ -3,14 +3,26 @@ import { DiscountService } from "@/requests/discount";
 import toast from "react-hot-toast";
 import type { CreateDiscountInput, UpdateDiscountInput } from "@/models/discount";
 
-export const useDiscount = () => {
+interface UseDiscountOptions {
+  /**
+   * Bật/tắt việc gọi API getAll mã giảm giá (chỉ ADMIN mới dùng).
+   *  - true: dùng cho trang admin (mặc định)
+   *  - false: dùng cho trang user (checkout) để tránh 401 không cần thiết
+   */
+  enableGetAll?: boolean;
+}
+
+export const useDiscount = (options?: UseDiscountOptions) => {
   const queryClient = useQueryClient();
+  const enableGetAll = options?.enableGetAll ?? true;
 
   const discountsData = useQuery({
-    queryKey: ["discounts"],
+    // Dùng key riêng cho trang admin để không ảnh hưởng tới trang user (checkout)
+    queryKey: ["discounts-admin"],
     queryFn: () => DiscountService.getAll(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    enabled: enableGetAll,
   });
 
   const createMutation = useMutation({
